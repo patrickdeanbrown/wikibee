@@ -1,0 +1,5 @@
+requests>=2.0
+pytest>=6.0
+requests-mock>=1.11.0
+inflect>=6.0
+ruff>=0.0.0

@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wiki_extractor"
+version = "0.1.0"
+requires-python = ">=3.8"
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+# Move legacy top-level options here to satisfy newer ruff versions
+select = ["E", "F", "W", "C"]
