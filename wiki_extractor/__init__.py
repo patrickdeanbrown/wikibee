@@ -1,22 +1,25 @@
-"""Backward-compatible shim module.
+"""Public package API for wiki_extractor.
 
-This file keeps the old import path `import extract` working by
-re-exporting the public API from the new package module
-`wiki_extractor.cli`.
+This module re-exports the public functions and exceptions from
+`wiki_extractor.cli` so callers can import directly from
+``wiki_extractor`` (and the old top-level `extract` module remains
+backwards-compatible).
 """
 
-from wiki_extractor import cli as _cli
+from . import cli as _cli
+from . import formatting as _formatting
 
+# Re-export commonly used names
 sanitize_filename = _cli.sanitize_filename
 make_tts_friendly = _cli.make_tts_friendly
 extract_wikipedia_text = _cli.extract_wikipedia_text
 normalize_for_tts = _cli.normalize_for_tts
-INFLECT_AVAILABLE = _cli.INFLECT_AVAILABLE
+INFLECT_AVAILABLE = _formatting.INFLECT_AVAILABLE
 NetworkError = _cli.NetworkError
 APIError = _cli.APIError
 NotFoundError = _cli.NotFoundError
 DisambiguationError = _cli.DisambiguationError
-write_text_file = _cli.write_text_file
+write_text_file = _formatting.write_text_file
 
 __all__ = [
     "sanitize_filename",
