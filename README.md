@@ -43,3 +43,23 @@ Run linters and tests (PowerShell)
 # run tests
 .venv\Scripts\pytest -q
 ```
+
+Package entrypoint
+------------------
+
+You can run the tool as a package module as an alternative to the top-level script:
+
+```powershell
+# run via module
+.venv\Scripts\python -m wiki_extractor "https://en.wikipedia.org/wiki/Homer" --tts-file -o output
+```
+
+If you install the project in editable mode during development the `console_scripts` entrypoint will be available as `wiki-extractor`:
+
+```powershell
+# editable install
+.venv\Scripts\python -m pip install -e .
+
+# then run
+wiki-extractor "https://en.wikipedia.org/wiki/Homer" --tts-file -o output
+```
