@@ -5,18 +5,18 @@ re-exporting the public API from the new package module
 `wiki_extractor.cli`.
 """
 
-from wiki_extractor import cli as _cli
-
-sanitize_filename = _cli.sanitize_filename
-make_tts_friendly = _cli.make_tts_friendly
-extract_wikipedia_text = _cli.extract_wikipedia_text
-normalize_for_tts = _cli.normalize_for_tts
-INFLECT_AVAILABLE = _cli.INFLECT_AVAILABLE
-NetworkError = _cli.NetworkError
-APIError = _cli.APIError
-NotFoundError = _cli.NotFoundError
-DisambiguationError = _cli.DisambiguationError
-write_text_file = _cli.write_text_file
+from wiki_extractor import (
+    sanitize_filename as sanitize_filename,
+    make_tts_friendly as make_tts_friendly,
+    extract_wikipedia_text as extract_wikipedia_text,
+    normalize_for_tts as normalize_for_tts,
+    INFLECT_AVAILABLE as INFLECT_AVAILABLE,
+    NetworkError as NetworkError,
+    APIError as APIError,
+    NotFoundError as NotFoundError,
+    DisambiguationError as DisambiguationError,
+    write_text_file as write_text_file,
+)
 
 __all__ = [
     "sanitize_filename",

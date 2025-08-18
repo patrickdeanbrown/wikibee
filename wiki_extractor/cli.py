@@ -7,14 +7,16 @@ import os
 from typing import Optional, Tuple
 
 from .client import WikiClient
-from .formatting import (
-    sanitize_filename,
-    normalize_for_tts,
-    make_tts_friendly,
-    INFLECT_AVAILABLE,
-    write_text_file,
-)
 import requests
+from . import formatting as _formatting
+
+# Re-export frequently used formatting helpers for backward compatibility.
+# Import the module and assign names so linters don't report unused imports.
+sanitize_filename = _formatting.sanitize_filename
+normalize_for_tts = _formatting.normalize_for_tts
+make_tts_friendly = _formatting.make_tts_friendly
+INFLECT_AVAILABLE = _formatting.INFLECT_AVAILABLE
+write_text_file = _formatting.write_text_file
 
 logger = logging.getLogger(__name__)
 
