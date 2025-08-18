@@ -6,3 +6,28 @@ __pycache__/
 .DS_Store
 .vscode/
 .idea/
+
+# Python build/artifact dirs
+build/
+dist/
+*.egg-info/
+eggs/
+
+# Test and coverage
+.pytest_cache/
+.cache/
+.mypy_cache/
+.coverage
+coverage.xml
+
+# packaging
+pip-wheel-metadata/
+
+# local virtualenv
+venv/
+
+# macOS
+.AppleDouble
+
+# logs
+*.log
