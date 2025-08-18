@@ -205,7 +205,7 @@ def main():
         choices=("mp3", "wav"),
         help="Audio output format",
     )
-    
+
     # Parse arguments and execute
     args = parser.parse_args()
 

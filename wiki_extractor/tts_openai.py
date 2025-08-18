@@ -51,7 +51,7 @@ class TTSOpenAIClient:
                 if OpenAI is None:
                     try:
                         from openai import OpenAI as _OpenAI  # type: ignore
-                    except Exception as e:  # pragma: no cover - tests monkeypatch instead
+                    except Exception as e:  # pragma: no cover - tests monkeypatch
                         raise TTSClientError(
                             "OpenAI client is not available; install 'openai' or"
                             " monkeypatch OpenAI in tests"
