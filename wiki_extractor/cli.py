@@ -138,7 +138,7 @@ def main():
     parser.add_argument(
         "-o",
         "--output-dir",
-        default=os.getcwd(),
+        default=os.path.join(os.getcwd(), "output"),
         help="Directory to save output",
     )
     parser.add_argument(
