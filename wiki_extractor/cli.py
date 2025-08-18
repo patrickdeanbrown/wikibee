@@ -9,6 +9,7 @@ from typing import Optional, Tuple
 from .client import WikiClient
 import requests
 from . import formatting as _formatting
+from .tts_openai import TTSOpenAIClient, TTSClientError
 
 # Re-export frequently used formatting helpers for backward compatibility.
 # Import the module and assign names so linters don't report unused imports.
@@ -137,7 +138,7 @@ def main():
     parser.add_argument(
         "-o",
         "--output-dir",
-        default=os.getcwd(),
+        default=os.path.join(os.getcwd(), "output"),
         help="Directory to save output",
     )
     parser.add_argument(
@@ -183,17 +184,40 @@ def main():
         action="store_true",
         help="Verbose logging",
     )
+    parser.add_argument(
+        "--tts-audio",
+        action="store_true",
+        help="Also produce an audio file via the local Kokoro/OpenAI-compatible TTS",
+    )
+    parser.add_argument(
+        "--tts-server",
+        default="http://localhost:8880/v1",
+        help="Base URL of the local TTS server (OpenAI-compatible)",
+    )
+    parser.add_argument(
+    "--tts-voice",
+    default="af_sky+af_bella",
+        help="Voice identifier for the TTS engine",
+    )
+    parser.add_argument(
+        "--tts-format",
+        default="mp3",
+        choices=("mp3", "wav"),
+        help="Audio output format",
+    )
+
+    # Parse arguments and execute
     args = parser.parse_args()
 
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
 
     url = args.url
-    if not url.startswith(('http://', 'https://')):
-        logger.error('URL must include http:// or https://')
+    if not url.startswith(("http://", "https://")):
+        logger.error("URL must include http:// or https://")
         return
 
-    logger.info('Attempting to extract text from: %s', url)
+    logger.info("Attempting to extract text from: %s", url)
 
     result_text, page_title = extract_wikipedia_text(
         url,
@@ -203,7 +227,7 @@ def main():
     )
 
     if result_text is None:
-        logger.error('Failed to extract text from URL')
+        logger.error("Failed to extract text from URL")
         return
 
     base_name = args.filename or page_title or 'wikipedia_article'
@@ -221,28 +245,75 @@ def main():
                 break
 
     markdown_content = f"# {page_title}\n\n{result_text}\n"
-
     try:
-        if args.no_save:
-            print(markdown_content)
-        else:
-            with open(md_path, 'w', encoding='utf-8') as f:
-                f.write(markdown_content)
-            logger.info('Saved markdown to %s', md_path)
-            print(f"Output saved to: {md_path}")
-
-            if args.tts_file:
-                tts_text = make_tts_friendly(
-                    markdown_content, heading_prefix=args.heading_prefix
-                )
-                tts_path = os.path.splitext(md_path)[0] + '.txt'
-                with open(tts_path, 'w', encoding='utf-8') as f:
-                    f.write(tts_text)
-                logger.info('Saved TTS-friendly text to %s', tts_path)
-                print(f"TTS-friendly copy saved to: {tts_path}")
-
+        _write_outputs(args, markdown_content, md_path, out_dir, page_title)
     except IOError as e:
         logger.error('Failed to write output: %s', e)
+
+def _produce_audio(
+    markdown_content: str,
+    md_path: str,
+    out_dir: str,
+    args,
+):
+    audio_ext = '.' + args.tts_format
+    audio_path = os.path.splitext(md_path)[0] + audio_ext
+    text_source = _build_tts_text(markdown_content, args)
+    try:
+        saved = _synthesize_audio(text_source, audio_path, out_dir, args)
+        logger.info('Saved audio to %s', saved)
+        print(f'Audio saved to: {saved}')
+    except TTSClientError as e:
+        logger.error('Failed to synthesize audio: %s', e)
+
+
+def _build_tts_text(markdown_content: str, args) -> str:
+    if args.tts_file:
+        return make_tts_friendly(markdown_content, heading_prefix=args.heading_prefix)
+    return make_tts_friendly(markdown_content)
+
+
+def _synthesize_audio(text: str, audio_path: str, out_dir: str, args) -> str:
+    tts_client = TTSOpenAIClient(base_url=args.tts_server)
+    return tts_client.synthesize_to_file(
+        text,
+        dest_path=audio_path,
+        base_dir=out_dir,
+        model='kokoro',
+        voice=args.tts_voice,
+        file_format=args.tts_format,
+    )
+
+
+def _write_outputs(
+    args,
+    markdown_content: str,
+    md_path: str,
+    out_dir: str,
+    page_title: str,
+) -> None:
+    """Write markdown and optional TTS text/audio outputs."""
+    if args.no_save:
+        print(markdown_content)
+        return
+
+    with open(md_path, 'w', encoding='utf-8') as f:
+        f.write(markdown_content)
+    logger.info('Saved markdown to %s', md_path)
+    print(f"Output saved to: {md_path}")
+
+    if args.tts_file:
+        tts_text = make_tts_friendly(
+            markdown_content, heading_prefix=args.heading_prefix
+        )
+        tts_path = os.path.splitext(md_path)[0] + '.txt'
+        with open(tts_path, 'w', encoding='utf-8') as f:
+            f.write(tts_text)
+        logger.info('Saved TTS-friendly text to %s', tts_path)
+        print(f"TTS-friendly copy saved to: {tts_path}")
+
+    if args.tts_audio:
+        _produce_audio(markdown_content, md_path, out_dir, args)
 
 
 if __name__ == '__main__':

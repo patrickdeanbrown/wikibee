@@ -31,3 +31,6 @@ venv/
 
 # logs
 *.log
+
+# Generated article outputs
+output/
