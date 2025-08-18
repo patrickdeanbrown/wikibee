@@ -1,6 +1,6 @@
 # wiki_extractor
 
-[![CI](https://github.com/<OWNER>/<REPO>/actions/workflows/python-tests.yml/badge.svg)](https://github.com/<OWNER>/<REPO>/actions/workflows/python-tests.yml)
+[![CI](https://github.com/patrickdeanbrown/wiki_extractor/actions/workflows/python-tests.yml/badge.svg)](https://github.com/patrickdeanbrown/wiki_extractor/actions/workflows/python-tests.yml)
 
 Small utility to extract plain text from Wikipedia articles and produce a TTS-friendly plain text file.
 
