@@ -107,3 +107,21 @@ def write_text_file(path: str, base_dir: str, content: str) -> None:
     os.makedirs(os.path.dirname(target), exist_ok=True)
     with open(target, 'w', encoding='utf-8') as f:
         f.write(content)
+
+
+def write_binary_file(path: str, base_dir: str, content_iterable) -> None:
+    """Safely write binary content to a path inside base_dir.
+
+    `content_iterable` should yield bytes-like chunks (an iterable or generator).
+    """
+    import os
+
+    base_dir = os.path.abspath(base_dir)
+    target = os.path.abspath(path)
+    if not (target == base_dir or target.startswith(base_dir + os.sep)):
+        raise ValueError('Attempt to write outside of output directory')
+    os.makedirs(os.path.dirname(target), exist_ok=True)
+    with open(target, 'wb') as f:
+        for chunk in content_iterable:
+            if chunk:
+                f.write(chunk)
