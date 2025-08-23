@@ -102,7 +102,8 @@ The code uses structured exceptions:
 
 ## Configuration
 
-- **Ruff**: Line length 88, linting rules in `pyproject.toml`
+- **Ruff**: Line length 88 characters (strictly enforced), linting rules in `pyproject.toml`
+- **Code style**: All lines must be ≤88 characters to pass linting
 - **Pytest**: Configuration in `setup.cfg`
 - **Console script**: `wiki-extractor` entry point defined in `setup.cfg`
 - **TTS defaults**: Kokoro voice `af_sky+af_bella`, MP3 format, localhost:8880 server
