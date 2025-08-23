@@ -19,6 +19,18 @@ pipx install wiki-extractor
 wiki-extractor "Homer" --tts --heading-prefix "Section:" -o output
 ```
 
+### One-step pipx install
+
+The repository provides a small `Makefile` helper that installs the package
+with [pipx](https://pipx.pypa.io/) and verifies the command is available:
+
+```bash
+make install
+```
+
+This checks that `pipx` is present, installs the project and runs
+`wiki-extractor --help` to confirm everything is wired up.
+
 Usage
 
 - CLI flags: `article` (positional), `--yolo/-y`, `--output/-o`, `--filename/-f`, `--no-save/-n`, `--timeout/-t`, `--lead-only/-l`, `--tts`, `--heading-prefix`, `--verbose/-v`.
@@ -66,3 +78,18 @@ wiki-extractor "https://en.wikipedia.org/wiki/Homer" --tts -o output
 # run via module
 python -m wiki_extractor "https://en.wikipedia.org/wiki/Homer" --tts -o output
 ```
+
+### Standalone binaries
+
+Release builds include standalone executables for Windows, macOS and
+Linux created with PyInstaller. Download the file for your platform from
+the [releases page](https://github.com/patrickdeanbrown/wiki_extractor/releases),
+make it executable if necessary (`chmod +x wiki-extractor` on
+Unix-like systems) and run it directly:
+
+```bash
+./wiki-extractor "Homer" --tts --heading-prefix "Section:" -o output
+```
+
+These binaries bundle Python so no interpreter or virtual environment is
+required.

@@ -1,0 +1,32 @@
+name: release-binaries
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.os }} binary
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install . pyinstaller
+      - name: Build binary
+        run: pyinstaller wiki_extractor/cli.py --name wiki-extractor --onefile
+      - name: Upload release asset
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/wiki-extractor*
