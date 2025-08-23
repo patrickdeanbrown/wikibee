@@ -6,21 +6,17 @@ Small utility to extract plain text from Wikipedia articles and produce a TTS-fr
 
 Requirements
 - Python 3.8-3.13
-- See `requirements.txt` for runtime/dev dependencies.
 
 Quickstart (PowerShell)
 
 ```powershell
-# create and activate venv
-python -m venv .venv
-. .\.venv\Scripts\Activate.ps1
-
-# install deps
-.venv\Scripts\python -m pip install --upgrade pip
-.venv\Scripts\python -m pip install -r requirements.txt
+# install
+pip install wiki-extractor
+# or
+pipx install wiki-extractor
 
 # extract an article and produce TTS file
-.venv\Scripts\python extract.py -a "https://en.wikipedia.org/wiki/Homer" --tts-file --heading-prefix "Section:" -o output
+wiki-extractor -a "https://en.wikipedia.org/wiki/Homer" --tts-file --heading-prefix "Section:" -o output
 ```
 
 Usage
@@ -31,13 +27,13 @@ Usage
 
 ```powershell
 # URL (traditional)
-.venv\Scripts\python extract.py -a "https://en.wikipedia.org/wiki/Homer" --tts-file -o output
+wiki-extractor -a "https://en.wikipedia.org/wiki/Homer" --tts-file -o output
 
 # Search term with fuzzy matching
-.venv\Scripts\python extract.py -a "homer ancient greek poet" --tts-file -o output
+wiki-extractor -a "homer ancient greek poet" --tts-file -o output
 
 # Auto-select first result (--yolo)
-.venv\Scripts\python extract.py -a "homer poet" --yolo --tts-file -o output
+wiki-extractor -a "homer poet" --yolo --tts-file -o output
 ```
 
 Notes
@@ -60,19 +56,13 @@ Run linters and tests (PowerShell)
 Package entrypoint
 ------------------
 
-You can run the tool as a package module as an alternative to the top-level script:
+After installation the `wiki-extractor` console script is available. You can also run the tool as a package module:
 
 ```powershell
-# run via module
-.venv\Scripts\python -m wiki_extractor -a "https://en.wikipedia.org/wiki/Homer" --tts-file -o output
-```
-
-If you install the project in editable mode during development the `console_scripts` entrypoint will be available as `wiki-extractor`:
-
-```powershell
-# editable install
-.venv\Scripts\python -m pip install -e .
-
-# then run
+# console script
 wiki-extractor -a "https://en.wikipedia.org/wiki/Homer" --tts-file -o output
+
+# run via module
+python -m wiki_extractor -a "https://en.wikipedia.org/wiki/Homer" --tts-file -o output
 ```
+
