@@ -92,7 +92,8 @@ class TestCenturyOrdinals:
             "The 19th century saw the 2nd Industrial Revolution in the 1st half"
         )
         expected = (
-            "The nineteenth century saw the second Industrial Revolution in the first half"
+            "The nineteenth century saw the second Industrial Revolution "
+            "in the first half"
         )
         result = normalizer._normalize_century_ordinals(input_text)
         assert result == expected
@@ -129,8 +130,14 @@ class TestLatinAbbreviations:
                 "Machine learning, i.e., automated pattern recognition",
                 "Machine learning, that is automated pattern recognition"
             ),
-            ("Various methods: classification, regression, etc.", "Various methods: classification, regression, et cetera"),
-            ("The algorithm was developed c. 1943 by Turing", "The algorithm was developed circa 1943 by Turing"),
+            (
+                "Various methods: classification, regression, etc.",
+                "Various methods: classification, regression, et cetera",
+            ),
+            (
+                "The algorithm was developed c. 1943 by Turing",
+                "The algorithm was developed circa 1943 by Turing",
+            ),
         ]
 
         for input_text, expected in test_cases:
@@ -145,7 +152,10 @@ class TestLatinAbbreviations:
 
         test_cases = [
             ("This includes E.G. algorithms", "This includes for example algorithms"),
-            ("Machine learning I.E. pattern recognition", "Machine learning that is pattern recognition"),
+            (
+                "Machine learning I.E. pattern recognition",
+                "Machine learning that is pattern recognition",
+            ),
             ("Various methods ETC.", "Various methods et cetera"),
         ]
 
@@ -176,7 +186,10 @@ class TestDecades:
         normalizer = TTSNormalizer()
 
         test_cases = [
-            ("The 1980s were transformative", "The nineteen eighties were transformative"),
+            (
+                "The 1980s were transformative",
+                "The nineteen eighties were transformative",
+            ),
             ("Music from the 1960s", "Music from the nineteen sixties"),
             ("The 1950s saw rapid growth", "The nineteen fifties saw rapid growth"),
             ("Technology in the 2020s", "Technology in the twenty twenties"),
