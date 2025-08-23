@@ -61,19 +61,19 @@ ruff check . --fix
 
 The tool can be used in multiple ways:
 
-1. **Direct script**: `python extract.py -a [url_or_search] [options]`
-2. **Module execution**: `python -m wiki_extractor -a [url_or_search] [options]`
-3. **Console script**: `wiki-extractor -a [url_or_search] [options]` (after `pip install -e .`)
+1. **Direct script**: `python extract.py [url_or_search] [options]`
+2. **Module execution**: `python -m wiki_extractor [url_or_search] [options]`
+3. **Console script**: `wiki-extractor [url_or_search] [options]` (after `pip install -e .`)
 4. **Programmatic**: Import functions from `wiki_extractor` package
 
 ### New Search Feature
 
 The tool now supports free-form search terms in addition to URLs:
 
-- **URL input**: `wiki-extractor -a "https://en.wikipedia.org/wiki/Wars_of_the_Roses"`
-- **Search input**: `wiki-extractor -a "war of the roses"`
-- **Fuzzy search**: `wiki-extractor -a "war fo the rose"` (handles typos)
-- **Auto-select**: `wiki-extractor -a "wars roses" --yolo` (picks first result)
+- **URL input**: `wiki-extractor "https://en.wikipedia.org/wiki/Wars_of_the_Roses"`
+- **Search input**: `wiki-extractor "war of the roses"`
+- **Fuzzy search**: `wiki-extractor "war fo the rose"` (handles typos)
+- **Auto-select**: `wiki-extractor "wars roses" --yolo` (picks first result)
 
 The search feature provides:
 - Interactive colored menu for multiple results
@@ -86,7 +86,7 @@ The search feature provides:
 - **No emojis**: The interface uses ANSI colors instead of emojis for better readability and professionalism
 - **Numbered menu**: Uses simple number selection (1-10) + Enter rather than arrow key navigation for cross-platform compatibility across all terminals (Windows Command Prompt, PowerShell, macOS Terminal, Linux terminals, CI/CD environments, SSH sessions)
 
-Key CLI options: `--article/-a` (required), `--yolo/-y`, `--output-dir`, `--tts-file`, `--tts-audio`, `--heading-prefix`, `--lead-only`, `--verbose`
+Key CLI options: `article` (positional), `--yolo/-y`, `--output/-o`, `--tts`, `--audio`, `--heading-prefix`, `--lead-only/-l`, `--verbose/-v`
 
 ## Error Handling
 

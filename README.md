@@ -16,24 +16,24 @@ pip install wiki-extractor
 pipx install wiki-extractor
 
 # extract an article and produce TTS file
-wiki-extractor -a "https://en.wikipedia.org/wiki/Homer" --tts-file --heading-prefix "Section:" -o output
+wiki-extractor "Homer" --tts --heading-prefix "Section:" -o output
 ```
 
 Usage
 
-- CLI flags: `--article/-a` (required), `--yolo/-y`, `--output-dir`, `--filename`, `--no-save`, `--timeout`, `--lead-only`, `--tts-file`, `--heading-prefix`, `--verbose`.
+- CLI flags: `article` (positional), `--yolo/-y`, `--output/-o`, `--filename/-f`, `--no-save/-n`, `--timeout/-t`, `--lead-only/-l`, `--tts`, `--heading-prefix`, `--verbose/-v`.
 
 **New Search Feature**: The tool now accepts both Wikipedia URLs and free-form search terms:
 
 ```powershell
 # URL (traditional)
-wiki-extractor -a "https://en.wikipedia.org/wiki/Homer" --tts-file -o output
+wiki-extractor "https://en.wikipedia.org/wiki/Homer" --tts -o output
 
 # Search term with fuzzy matching
-wiki-extractor -a "homer ancient greek poet" --tts-file -o output
+wiki-extractor "homer ancient greek poet" --tts -o output
 
 # Auto-select first result (--yolo)
-wiki-extractor -a "homer poet" --yolo --tts-file -o output
+wiki-extractor "homer poet" --yolo --tts -o output
 ```
 
 Notes
@@ -60,8 +60,8 @@ After installation the `wiki-extractor` console script is available. You can als
 
 ```powershell
 # console script
-wiki-extractor -a "https://en.wikipedia.org/wiki/Homer" --tts-file -o output
+wiki-extractor "https://en.wikipedia.org/wiki/Homer" --tts -o output
 
 # run via module
-python -m wiki_extractor -a "https://en.wikipedia.org/wiki/Homer" --tts-file -o output
+python -m wiki_extractor "https://en.wikipedia.org/wiki/Homer" --tts -o output
 ```
