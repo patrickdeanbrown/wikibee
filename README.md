@@ -39,6 +39,7 @@ wiki-extractor "homer poet" --yolo --tts -o output
 Notes
 - The TTS file strips Markdown markers (including `#`) so TTS engines like Kokoro won't say "number" for headings.
 - Optional number-to-word conversion requires the `inflect` package.
+- Rich-powered console messages provide clearer, colorized CLI output.
 
 Development
 - Tests are under `tests/`. Run `pytest` in the project root inside the venv.

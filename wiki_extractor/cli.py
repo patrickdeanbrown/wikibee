@@ -8,6 +8,7 @@ from typing import Optional, Tuple
 
 import requests
 import typer
+from rich.console import Console
 
 from . import formatting as _formatting
 from .client import WikiClient
@@ -25,18 +26,7 @@ write_text_file = _formatting.write_text_file
 logger = logging.getLogger(__name__)
 
 app = typer.Typer()
-
-
-# ANSI color codes for terminal output
-class Colors:
-    BLUE = "\033[94m"
-    GREEN = "\033[92m"
-    YELLOW = "\033[93m"
-    RED = "\033[91m"
-    CYAN = "\033[96m"
-    MAGENTA = "\033[95m"
-    BOLD = "\033[1m"
-    END = "\033[0m"
+console = Console()
 
 
 def _handle_search(search_term: str, args) -> Optional[str]:
@@ -46,24 +36,24 @@ def _handle_search(search_term: str, args) -> Optional[str]:
     try:
         results = client.search_articles(search_term, limit=10, timeout=args.timeout)
     except requests.exceptions.RequestException as e:
-        print(f"{Colors.RED}Search failed: {e}{Colors.END}")
+        console.print(f"[red]Search failed: {e}[/]")
         return None
 
     if not results:
-        print(f"{Colors.YELLOW}No results found for '{search_term}'{Colors.END}")
-        print(f"{Colors.CYAN}Try different search terms or check spelling.{Colors.END}")
+        console.print(f"[yellow]No results found for '{search_term}'[/]")
+        console.print("[cyan]Try different search terms or check spelling.[/]")
         return None
 
     if len(results) == 1:
         result = results[0]
-        print(f"{Colors.GREEN}Found exact match: \"{result['title']}\"{Colors.END}")
-        print(f"{Colors.CYAN}Extracting article...{Colors.END}")
+        console.print(f"[green]Found exact match: \"{result['title']}\"[/]")
+        console.print("[cyan]Extracting article...[/]")
         return result["url"]
 
     # Multiple results - show menu unless --yolo
     if args.yolo:
         result = results[0]
-        print(f"{Colors.MAGENTA}Auto-selected: \"{result['title']}\"{Colors.END}")
+        console.print(f"[magenta]Auto-selected: \"{result['title']}\"[/]")
         return result["url"]
 
     return _show_search_menu(results, search_term)
@@ -71,9 +61,8 @@ def _handle_search(search_term: str, args) -> Optional[str]:
 
 def _show_search_menu(results: list[dict], search_term: str) -> Optional[str]:
     """Display interactive search menu and return selected URL."""
-    print(
-        f"\n{Colors.BOLD}{Colors.BLUE}Found {len(results)} results for "
-        f"'{search_term}':{Colors.END}\n"
+    console.print(
+        f"\n[bold blue]Found {len(results)} results for '{search_term}':[/]\n"
     )
 
     for i, result in enumerate(results, 1):
@@ -82,40 +71,36 @@ def _show_search_menu(results: list[dict], search_term: str) -> Optional[str]:
 
         # Highlight first result and number others
         if i == 1:
-            print(f"{Colors.BOLD}{Colors.GREEN}1. {title}{Colors.END}")
+            console.print(f"[bold green]1. {title}[/]")
         else:
-            print(f"{Colors.BOLD}{i}. {title}{Colors.END}")
+            console.print(f"[bold]{i}. {title}[/]")
 
         if desc:
-            print(f"   {Colors.CYAN}{desc}{Colors.END}")
-        print()
+            console.print(f"   [cyan]{desc}[/]")
+        console.print()
 
     while True:
         try:
-            prompt = (
-                f"{Colors.YELLOW}Enter your choice (1-{len(results)}) or "
-                f"'q' to quit: {Colors.END}"
-            )
-            choice = input(prompt).strip().lower()
+            prompt = f"[yellow]Enter your choice (1-{len(results)}) or 'q' to quit: [/]"
+            choice = console.input(prompt).strip().lower()
 
             if choice == "q":
-                print(f"{Colors.MAGENTA}Cancelled{Colors.END}")
+                console.print("[magenta]Cancelled[/]")
                 return None
 
             choice_num = int(choice)
             if 1 <= choice_num <= len(results):
                 selected = results[choice_num - 1]
-                print(f"{Colors.GREEN}Selected: {selected['title']}{Colors.END}")
+                console.print(f"[green]Selected: {selected['title']}[/]")
                 return selected["url"]
             else:
-                print(
-                    f"{Colors.RED}Please enter a number between 1 and "
-                    f"{len(results)}{Colors.END}"
+                console.print(
+                    f"[red]Please enter a number between 1 and {len(results)}[/]"
                 )
         except ValueError:
-            print(f"{Colors.RED}Please enter a valid number or 'q' to quit{Colors.END}")
+            console.print("[red]Please enter a valid number or 'q' to quit[/]")
         except KeyboardInterrupt:
-            print(f"\n{Colors.MAGENTA}Cancelled{Colors.END}")
+            console.print("\n[magenta]Cancelled[/]")
             return None
 
 
@@ -380,7 +365,7 @@ def _produce_audio(
     try:
         saved = _synthesize_audio(text_source, audio_path, out_dir, args)
         logger.info("Saved audio to %s", saved)
-        print(f"Audio saved to: {saved}")
+        console.print(f"Audio saved to: {saved}")
     except TTSClientError as e:
         logger.error("Failed to synthesize audio: %s", e)
 
@@ -419,13 +404,13 @@ def _write_outputs(
 ) -> None:
     """Write markdown and optional TTS text/audio outputs."""
     if args.no_save:
-        print(markdown_content)
+        console.print(markdown_content)
         return
 
     with open(md_path, "w", encoding="utf-8") as f:
         f.write(markdown_content)
     logger.info("Saved markdown to %s", md_path)
-    print(f"Output saved to: {md_path}")
+    console.print(f"Output saved to: {md_path}")
 
     if args.tts_file:
         # Apply normalization if requested
@@ -440,7 +425,7 @@ def _write_outputs(
         with open(tts_path, "w", encoding="utf-8") as f:
             f.write(tts_text)
         logger.info("Saved TTS-friendly text to %s", tts_path)
-        print(f"TTS-friendly copy saved to: {tts_path}")
+        console.print(f"TTS-friendly copy saved to: {tts_path}")
 
     if args.tts_audio:
         _produce_audio(markdown_content, md_path, out_dir, args)
