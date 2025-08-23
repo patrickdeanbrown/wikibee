@@ -67,7 +67,10 @@ def _handle_search(search_term: str, args) -> Optional[str]:
 
 def _show_search_menu(results: list[dict], search_term: str) -> Optional[str]:
     """Display interactive search menu and return selected URL."""
-    print(f"\n{Colors.BOLD}{Colors.BLUE}Found {len(results)} results for '{search_term}':{Colors.END}\n")
+    print(
+        f"\n{Colors.BOLD}{Colors.BLUE}Found {len(results)} results for "
+        f"'{search_term}':{Colors.END}\n"
+    )
 
     for i, result in enumerate(results, 1):
         title = result["title"]
@@ -85,7 +88,11 @@ def _show_search_menu(results: list[dict], search_term: str) -> Optional[str]:
 
     while True:
         try:
-            choice = input(f"{Colors.YELLOW}Enter your choice (1-{len(results)}) or 'q' to quit: {Colors.END}").strip().lower()
+            prompt = (
+                f"{Colors.YELLOW}Enter your choice (1-{len(results)}) or "
+                f"'q' to quit: {Colors.END}"
+            )
+            choice = input(prompt).strip().lower()
 
             if choice == 'q':
                 print(f"{Colors.MAGENTA}Cancelled{Colors.END}")
@@ -97,7 +104,10 @@ def _show_search_menu(results: list[dict], search_term: str) -> Optional[str]:
                 print(f"{Colors.GREEN}Selected: {selected['title']}{Colors.END}")
                 return selected["url"]
             else:
-                print(f"{Colors.RED}Please enter a number between 1 and {len(results)}{Colors.END}")
+                print(
+                    f"{Colors.RED}Please enter a number between 1 and "
+                    f"{len(results)}{Colors.END}"
+                )
         except ValueError:
             print(f"{Colors.RED}Please enter a valid number or 'q' to quit{Colors.END}")
         except KeyboardInterrupt:
@@ -417,11 +427,10 @@ def _write_outputs(
 
     if args.tts_file:
         # Apply normalization if requested
-        content_for_tts = (
-            tts_normalize_for_tts(markdown_content) 
-            if args.tts_normalize 
-            else markdown_content
-        )
+        if args.tts_normalize:
+            content_for_tts = tts_normalize_for_tts(markdown_content)
+        else:
+            content_for_tts = markdown_content
         tts_text = make_tts_friendly(
             content_for_tts, heading_prefix=args.heading_prefix
         )

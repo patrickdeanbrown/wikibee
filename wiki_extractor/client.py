@@ -52,7 +52,9 @@ class WikiClient:
         resp.raise_for_status()
         return resp.json()
 
-    def search_articles(self, query: str, limit: int = 10, timeout: int = 15) -> list[dict]:
+    def search_articles(
+        self, query: str, limit: int = 10, timeout: int = 15
+    ) -> list[dict]:
         """Search for Wikipedia articles using OpenSearch API with fuzzy matching."""
         api_url = "https://en.wikipedia.org/w/api.php"
         params = {
@@ -82,7 +84,11 @@ class WikiClient:
             results.append({
                 "title": title,
                 "description": descriptions[i] if i < len(descriptions) else "",
-                "url": urls[i] if i < len(urls) else f"https://en.wikipedia.org/wiki/{title.replace(' ', '_')}"
+                "url": (
+                    urls[i]
+                    if i < len(urls)
+                    else f"https://en.wikipedia.org/wiki/{title.replace(' ', '_')}"
+                ),
             })
 
         return results
