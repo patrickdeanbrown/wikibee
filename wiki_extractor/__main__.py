@@ -10,7 +10,7 @@ from . import cli as _cli
 
 
 def _main() -> None:
-    _cli.main()
+    _cli.app()
 
 
 if __name__ == "__main__":

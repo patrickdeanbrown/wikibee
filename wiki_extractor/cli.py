@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-import argparse
 import json
 import logging
 import os
+from types import SimpleNamespace
 from typing import Optional, Tuple
 
 import requests
+import typer
 
 from . import formatting as _formatting
 from .client import WikiClient
@@ -22,6 +23,8 @@ INFLECT_AVAILABLE = _formatting.INFLECT_AVAILABLE
 write_text_file = _formatting.write_text_file
 
 logger = logging.getLogger(__name__)
+
+app = typer.Typer()
 
 
 # ANSI color codes for terminal output
@@ -211,104 +214,110 @@ def extract_wikipedia_text(
     return _process_page(page_obj, convert_numbers_for_tts, raise_on_error)
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        description=("Extract plain text from a Wikipedia article")
-    )
-    parser.add_argument(
-        "article",
-        help=("Wikipedia article URL or search term"),
-    )
-    parser.add_argument(
+@app.command()
+def main(
+    article: str = typer.Argument(..., help="Wikipedia article URL or search term"),
+    output_dir: str = typer.Option(
+        os.path.join(os.getcwd(), "output"),
         "-o",
         "--output",
         "--output-dir",
-        dest="output_dir",
-        default=os.path.join(os.getcwd(), "output"),
         help="Directory to save output",
-    )
-    parser.add_argument(
+    ),
+    filename: Optional[str] = typer.Option(
+        None,
         "-f",
         "--filename",
-        help=("Base filename to use (otherwise derived from title)"),
-    )
-    parser.add_argument(
+        help="Base filename to use (otherwise derived from title)",
+    ),
+    no_save: bool = typer.Option(
+        False,
         "-n",
         "--no-save",
-        action="store_true",
         help="Do not save to file; print to stdout",
-    )
-    parser.add_argument(
+    ),
+    timeout: int = typer.Option(
+        15,
         "-t",
         "--timeout",
-        type=int,
-        default=15,
         help="HTTP timeout seconds",
-    )
-    parser.add_argument(
+    ),
+    lead_only: bool = typer.Option(
+        False,
         "-l",
         "--lead-only",
-        action="store_true",
         help="Fetch only the lead (intro) section",
-    )
-    parser.add_argument(
+    ),
+    tts: bool = typer.Option(
+        False,
         "--tts",
         "--tts-file",
-        dest="tts_file",
-        action="store_true",
-        help=("Also produce a TTS-friendly .txt alongside the .md"),
-    )
-    parser.add_argument(
+        help="Also produce a TTS-friendly .txt alongside the .md",
+    ),
+    heading_prefix: Optional[str] = typer.Option(
+        None,
         "--heading-prefix",
-        default=None,
-        help=("Prefix for headings in TTS file, e.g. 'Section:'"),
-    )
-    parser.add_argument(
+        help="Prefix for headings in TTS file, e.g. 'Section:'",
+    ),
+    verbose: bool = typer.Option(
+        False,
         "-v",
         "--verbose",
-        action="store_true",
         help="Verbose logging",
-    )
-    parser.add_argument(
+    ),
+    audio: bool = typer.Option(
+        False,
         "--audio",
         "--tts-audio",
-        dest="tts_audio",
-        action="store_true",
         help="Also produce an audio file via the local Kokoro/OpenAI-compatible TTS",
-    )
-    parser.add_argument(
+    ),
+    tts_server: str = typer.Option(
+        "http://localhost:8880/v1",
         "--tts-server",
-        default="http://localhost:8880/v1",
         help="Base URL of the local TTS server (OpenAI-compatible)",
-    )
-    parser.add_argument(
+    ),
+    tts_voice: str = typer.Option(
+        "af_sky+af_bella",
         "--tts-voice",
-        default="af_sky+af_bella",
         help="Voice identifier for the TTS engine",
-    )
-    parser.add_argument(
+    ),
+    tts_format: str = typer.Option(
+        "mp3",
         "--tts-format",
-        default="mp3",
-        choices=("mp3", "wav"),
         help="Audio output format",
-    )
-    parser.add_argument(
+    ),
+    yolo: bool = typer.Option(
+        False,
         "-y",
         "--yolo",
-        action="store_true",
         help="Auto-select first search result without prompting",
-    )
-    parser.add_argument(
+    ),
+    tts_normalize: bool = typer.Option(
+        False,
         "--tts-normalize",
-        action="store_true",
         help=(
             "Apply text normalization for better TTS pronunciation "
             "(e.g., 'Richard III' → 'Richard the third')"
         ),
+    ),
+):
+    args = SimpleNamespace(
+        article=article,
+        output_dir=output_dir,
+        filename=filename,
+        no_save=no_save,
+        timeout=timeout,
+        lead_only=lead_only,
+        tts_file=tts,
+        heading_prefix=heading_prefix,
+        verbose=verbose,
+        tts_audio=audio,
+        tts_server=tts_server,
+        tts_voice=tts_voice,
+        tts_format=tts_format,
+        yolo=yolo,
+        tts_normalize=tts_normalize,
     )
-
-    # Parse arguments and execute
-    args = parser.parse_args()
 
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
@@ -324,7 +333,7 @@ def main():
         # It's a search term - perform search first
         url = _handle_search(article_input, args)
         if url is None:
-            return
+            raise typer.Exit(code=1)
         logger.info("Extracting article: %s", url)
 
     result_text, page_title = extract_wikipedia_text(
@@ -336,7 +345,7 @@ def main():
 
     if result_text is None:
         logger.error("Failed to extract text from URL")
-        return
+        raise typer.Exit(code=1)
 
     base_name = args.filename or page_title or "wikipedia_article"
     safe_base = sanitize_filename(base_name)
@@ -438,4 +447,4 @@ def _write_outputs(
 
 
 if __name__ == "__main__":
-    main()
+    app()
