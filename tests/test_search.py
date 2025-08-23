@@ -69,7 +69,10 @@ class TestWikiClientSearch:
         client = WikiClient()
 
         with requests_mock.Mocker() as m:
-            m.get("https://en.wikipedia.org/w/api.php", exc=requests.RequestException("Network error"))
+            m.get(
+                "https://en.wikipedia.org/w/api.php",
+                exc=requests.RequestException("Network error")
+            )
 
             with pytest.raises(requests.RequestException):
                 client.search_articles("test")
@@ -141,7 +144,9 @@ class TestSearchHandling:
         mock_client = MagicMock()
         mock_client_class.return_value = mock_client
 
-        mock_client.search_articles.side_effect = requests.RequestException("Network error")
+        mock_client.search_articles.side_effect = requests.RequestException(
+            "Network error"
+        )
 
         args = MagicMock()
         args.timeout = 15

@@ -10,6 +10,7 @@ from .client import WikiClient
 import requests
 from . import formatting as _formatting
 from .tts_openai import TTSOpenAIClient, TTSClientError
+from .tts_normalizer import normalize_for_tts as tts_normalize_for_tts
 
 # Re-export frequently used formatting helpers for backward compatibility.
 # Import the module and assign names so linters don't report unused imports.
@@ -295,6 +296,14 @@ def main():
         action="store_true",
         help="Auto-select first search result without prompting",
     )
+    parser.add_argument(
+        "--tts-normalize",
+        action="store_true",
+        help=(
+            "Apply text normalization for better TTS pronunciation "
+            "(e.g., 'Richard III' → 'Richard the third')"
+        ),
+    )
 
     # Parse arguments and execute
     args = parser.parse_args()
@@ -365,9 +374,16 @@ def _produce_audio(
 
 
 def _build_tts_text(markdown_content: str, args) -> str:
+    # Apply TTS normalization if requested
+    if args.tts_normalize:
+        normalized_content = tts_normalize_for_tts(markdown_content)
+    else:
+        normalized_content = markdown_content
+
+    # Apply TTS-friendly formatting
     if args.tts_file:
-        return make_tts_friendly(markdown_content, heading_prefix=args.heading_prefix)
-    return make_tts_friendly(markdown_content)
+        return make_tts_friendly(normalized_content, heading_prefix=args.heading_prefix)
+    return make_tts_friendly(normalized_content)
 
 
 def _synthesize_audio(text: str, audio_path: str, out_dir: str, args) -> str:
@@ -400,8 +416,14 @@ def _write_outputs(
     print(f"Output saved to: {md_path}")
 
     if args.tts_file:
+        # Apply normalization if requested
+        content_for_tts = (
+            tts_normalize_for_tts(markdown_content) 
+            if args.tts_normalize 
+            else markdown_content
+        )
         tts_text = make_tts_friendly(
-            markdown_content, heading_prefix=args.heading_prefix
+            content_for_tts, heading_prefix=args.heading_prefix
         )
         tts_path = os.path.splitext(md_path)[0] + '.txt'
         with open(tts_path, 'w', encoding='utf-8') as f:
