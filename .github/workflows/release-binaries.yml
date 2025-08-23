@@ -26,7 +26,19 @@ jobs:
           python -m pip install . pyinstaller
       - name: Build binary
         run: pyinstaller wiki_extractor/cli.py --name wiki-extractor --onefile
+
+      - name: Rename binary for release
+        run: |
+          if [ "${{ runner.os }}" == "Linux" ]; then
+            mv dist/wiki-extractor dist/wiki-extractor-linux
+          elif [ "${{ runner.os }}" == "macOS" ]; then
+            mv dist/wiki-extractor dist/wiki-extractor-macos
+          elif [ "${{ runner.os }}" == "Windows" ]; then
+            mv dist/wiki-extractor.exe dist/wiki-extractor-windows.exe
+          fi
+        shell: bash
+
       - name: Upload release asset
         uses: softprops/action-gh-release@v1
         with:
-          files: dist/wiki-extractor*
+          files: dist/wiki-extractor-*
