@@ -216,14 +216,14 @@ def main():
         description=("Extract plain text from a Wikipedia article")
     )
     parser.add_argument(
-        "-a",
-        "--article",
-        required=True,
+        "article",
         help=("Wikipedia article URL or search term"),
     )
     parser.add_argument(
         "-o",
+        "--output",
         "--output-dir",
+        dest="output_dir",
         default=os.path.join(os.getcwd(), "output"),
         help="Directory to save output",
     )
@@ -233,23 +233,28 @@ def main():
         help=("Base filename to use (otherwise derived from title)"),
     )
     parser.add_argument(
+        "-n",
         "--no-save",
         action="store_true",
         help="Do not save to file; print to stdout",
     )
     parser.add_argument(
+        "-t",
         "--timeout",
         type=int,
         default=15,
         help="HTTP timeout seconds",
     )
     parser.add_argument(
+        "-l",
         "--lead-only",
         action="store_true",
         help="Fetch only the lead (intro) section",
     )
     parser.add_argument(
+        "--tts",
         "--tts-file",
+        dest="tts_file",
         action="store_true",
         help=("Also produce a TTS-friendly .txt alongside the .md"),
     )
@@ -265,7 +270,9 @@ def main():
         help="Verbose logging",
     )
     parser.add_argument(
+        "--audio",
         "--tts-audio",
+        dest="tts_audio",
         action="store_true",
         help="Also produce an audio file via the local Kokoro/OpenAI-compatible TTS",
     )
