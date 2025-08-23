@@ -13,8 +13,8 @@ def test_module_entrypoint_runs(monkeypatch, capsys):
     monkeypatch.setattr(cli, 'extract_wikipedia_text', fake_extract)
 
     # Provide args for the module so the CLI runs quickly and doesn't write files
-    # Simulate: python -m wiki_extractor https://example.org/wiki/Fake
-    monkeypatch.setattr(sys, 'argv', ['wiki_extractor', 'https://example.org/wiki/Fake'])
+    # Simulate: python -m wiki_extractor -a https://example.org/wiki/Fake
+    monkeypatch.setattr(sys, 'argv', ['wiki_extractor', '-a', 'https://example.org/wiki/Fake'])
 
     # Running the module should not raise
     runpy.run_module('wiki_extractor', run_name='__main__')

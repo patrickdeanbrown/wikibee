@@ -22,6 +22,88 @@ write_text_file = _formatting.write_text_file
 logger = logging.getLogger(__name__)
 
 
+# ANSI color codes for terminal output
+class Colors:
+    BLUE = '\033[94m'
+    GREEN = '\033[92m'
+    YELLOW = '\033[93m'
+    RED = '\033[91m'
+    CYAN = '\033[96m'
+    MAGENTA = '\033[95m'
+    BOLD = '\033[1m'
+    END = '\033[0m'
+
+
+def _handle_search(search_term: str, args) -> Optional[str]:
+    """Handle search term input and return selected article URL."""
+    client = WikiClient()
+
+    try:
+        results = client.search_articles(search_term, limit=10, timeout=args.timeout)
+    except requests.exceptions.RequestException as e:
+        print(f"{Colors.RED}Search failed: {e}{Colors.END}")
+        return None
+
+    if not results:
+        print(f"{Colors.YELLOW}No results found for '{search_term}'{Colors.END}")
+        print(f"{Colors.CYAN}Try different search terms or check spelling.{Colors.END}")
+        return None
+
+    if len(results) == 1:
+        result = results[0]
+        print(f"{Colors.GREEN}Found exact match: \"{result['title']}\"{Colors.END}")
+        print(f"{Colors.CYAN}Extracting article...{Colors.END}")
+        return result["url"]
+
+    # Multiple results - show menu unless --yolo
+    if args.yolo:
+        result = results[0]
+        print(f"{Colors.MAGENTA}Auto-selected: \"{result['title']}\"{Colors.END}")
+        return result["url"]
+
+    return _show_search_menu(results, search_term)
+
+
+def _show_search_menu(results: list[dict], search_term: str) -> Optional[str]:
+    """Display interactive search menu and return selected URL."""
+    print(f"\n{Colors.BOLD}{Colors.BLUE}Found {len(results)} results for '{search_term}':{Colors.END}\n")
+
+    for i, result in enumerate(results, 1):
+        title = result["title"]
+        desc = result.get("description", "").strip()
+
+        # Highlight first result and number others
+        if i == 1:
+            print(f"{Colors.BOLD}{Colors.GREEN}1. {title}{Colors.END}")
+        else:
+            print(f"{Colors.BOLD}{i}. {title}{Colors.END}")
+
+        if desc:
+            print(f"   {Colors.CYAN}{desc}{Colors.END}")
+        print()
+
+    while True:
+        try:
+            choice = input(f"{Colors.YELLOW}Enter your choice (1-{len(results)}) or 'q' to quit: {Colors.END}").strip().lower()
+
+            if choice == 'q':
+                print(f"{Colors.MAGENTA}Cancelled{Colors.END}")
+                return None
+
+            choice_num = int(choice)
+            if 1 <= choice_num <= len(results):
+                selected = results[choice_num - 1]
+                print(f"{Colors.GREEN}Selected: {selected['title']}{Colors.END}")
+                return selected["url"]
+            else:
+                print(f"{Colors.RED}Please enter a number between 1 and {len(results)}{Colors.END}")
+        except ValueError:
+            print(f"{Colors.RED}Please enter a valid number or 'q' to quit{Colors.END}")
+        except KeyboardInterrupt:
+            print(f"\n{Colors.MAGENTA}Cancelled{Colors.END}")
+            return None
+
+
 # Structured exceptions
 class NetworkError(RuntimeError):
     """Network-related errors (requests exceptions)"""
@@ -130,9 +212,11 @@ def main():
         )
     )
     parser.add_argument(
-        "url",
+        "-a",
+        "--article",
+        required=True,
         help=(
-            "Full Wikipedia article URL (include https://)"
+            "Wikipedia article URL or search term"
         ),
     )
     parser.add_argument(
@@ -205,6 +289,12 @@ def main():
         choices=("mp3", "wav"),
         help="Audio output format",
     )
+    parser.add_argument(
+        "-y",
+        "--yolo",
+        action="store_true",
+        help="Auto-select first search result without prompting",
+    )
 
     # Parse arguments and execute
     args = parser.parse_args()
@@ -212,12 +302,19 @@ def main():
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
 
-    url = args.url
-    if not url.startswith(("http://", "https://")):
-        logger.error("URL must include http:// or https://")
-        return
+    article_input = args.article
 
-    logger.info("Attempting to extract text from: %s", url)
+    # Determine if input is URL or search term
+    if article_input.startswith(("http://", "https://")):
+        # It's a URL - proceed with existing logic
+        url = article_input
+        logger.info("Attempting to extract text from: %s", url)
+    else:
+        # It's a search term - perform search first
+        url = _handle_search(article_input, args)
+        if url is None:
+            return
+        logger.info("Extracting article: %s", url)
 
     result_text, page_title = extract_wikipedia_text(
         url,
