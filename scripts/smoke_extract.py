@@ -10,7 +10,7 @@ import argparse
 import os
 import sys
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from extract import (
     extract_wikipedia_text,
@@ -23,41 +23,41 @@ from extract import (
 def main():
     parser = argparse.ArgumentParser(
         description=(
-            'Smoke test: extract a real Wikipedia article and '
-            'save outputs'
+            "Smoke test: extract a real Wikipedia article and " "save outputs"
         ),
     )
     parser.add_argument(
-        'url',
-        nargs='?',
-        default='https://en.wikipedia.org/wiki/Homer',
-        help='Article URL',
+        "url",
+        nargs="?",
+        default="https://en.wikipedia.org/wiki/Homer",
+        help="Article URL",
     )
     parser.add_argument(
-        '-o', '--output-dir',
-        default='output',
-        help='Directory to save output',
+        "-o",
+        "--output-dir",
+        default="output",
+        help="Directory to save output",
     )
     parser.add_argument(
-        '--tts-file',
-        action='store_true',
-        help='Also save a TTS-friendly .txt',
+        "--tts-file",
+        action="store_true",
+        help="Also save a TTS-friendly .txt",
     )
     parser.add_argument(
-        '--heading-prefix',
+        "--heading-prefix",
         default=None,
         help='Prefix for headings in TTS file (e.g. "Section:")',
     )
     parser.add_argument(
-        '--lead-only',
-        action='store_true',
-        help='Fetch only the intro/lead section',
+        "--lead-only",
+        action="store_true",
+        help="Fetch only the intro/lead section",
     )
     parser.add_argument(
-        '--timeout',
+        "--timeout",
         type=int,
         default=15,
-        help='HTTP timeout',
+        help="HTTP timeout",
     )
     args = parser.parse_args()
 
@@ -73,9 +73,9 @@ def main():
         print(f"Extraction failed or returned no text for: {url}")
         return 2
 
-    safe_base = sanitize_filename(title or 'wikipedia_article')
-    md_path = os.path.join(out_dir, safe_base + '.md')
-    tts_path = os.path.join(out_dir, safe_base + '.txt')
+    safe_base = sanitize_filename(title or "wikipedia_article")
+    md_path = os.path.join(out_dir, safe_base + ".md")
+    tts_path = os.path.join(out_dir, safe_base + ".txt")
 
     # Write files safely
     try:
@@ -95,5 +95,5 @@ def main():
     return 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     raise SystemExit(main())

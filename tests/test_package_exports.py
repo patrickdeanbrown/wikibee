@@ -1,13 +1,13 @@
 from wiki_extractor import (
-    sanitize_filename,
-    make_tts_friendly,
-    extract_wikipedia_text,
-    normalize_for_tts,
     INFLECT_AVAILABLE,
-    NetworkError,
     APIError,
-    NotFoundError,
     DisambiguationError,
+    NetworkError,
+    NotFoundError,
+    extract_wikipedia_text,
+    make_tts_friendly,
+    normalize_for_tts,
+    sanitize_filename,
     write_text_file,
 )
 

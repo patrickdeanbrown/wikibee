@@ -6,6 +6,7 @@ analysis of Wikipedia articles across history, computer science, and mathematics
 """
 
 import re
+
 from num2words import num2words
 
 
@@ -60,10 +61,7 @@ class TTSNormalizer:
         if not self._is_valid_roman(roman):
             raise ValueError(f"Invalid Roman numeral: {roman}")
 
-        values = {
-            'I': 1, 'V': 5, 'X': 10, 'L': 50,
-            'C': 100, 'D': 500, 'M': 1000
-        }
+        values = {"I": 1, "V": 5, "X": 10, "L": 50, "C": 100, "D": 500, "M": 1000}
 
         total = 0
         prev = 0
@@ -82,8 +80,9 @@ class TTSNormalizer:
         """Check if Roman numeral is properly formed."""
         # Basic pattern for valid Roman numerals I-L (1-50)
         # This catches common invalid patterns like XIIII, VVIII, IIII
-        valid_pattern = r'^M{0,4}(CM|CD|D?C{0,3})(XL|XC|L?X{0,3})(IX|IV|V?I{0,3})$'
+        valid_pattern = r"^M{0,4}(CM|CD|D?C{0,3})(XL|XC|L?X{0,3})(IX|IV|V?I{0,3})$"
         import re
+
         return bool(re.match(valid_pattern, roman))
 
     def _normalize_royal_names(self, text: str) -> str:
@@ -94,19 +93,20 @@ class TTSNormalizer:
             Louis XVI → Louis the sixteenth
             Napoleon III → Napoleon the third
         """
+
         def replace_royal(match):
             name = match.group(1)
             roman = match.group(2)
 
             # Skip certain patterns that aren't royal names
-            if name.startswith(('World War', 'Section', 'Chapter', 'Part')):
+            if name.startswith(("World War", "Section", "Chapter", "Part")):
                 return match.group(0)
 
             try:
                 num = self._roman_to_int(roman)
                 # Only handle reasonable royal name ranges (I-L, 1-50)
                 if num <= 50:
-                    ordinal = num2words(num, to='ordinal')
+                    ordinal = num2words(num, to="ordinal")
                     return f"{name} the {ordinal}"
                 else:
                     return match.group(0)
@@ -115,7 +115,7 @@ class TTSNormalizer:
 
         # Pattern: Name + space + Roman numeral (I-L, covers 1-50)
         # More restrictive pattern - typically person names
-        pattern = r'\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+([IVX]+)\b'
+        pattern = r"\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+([IVX]+)\b"
         return re.sub(pattern, replace_royal, text)
 
     def _normalize_century_ordinals(self, text: str) -> str:
@@ -126,18 +126,19 @@ class TTSNormalizer:
             3rd Battalion → third Battalion
             2nd World War → second World War
         """
+
         def replace_ordinal(match):
             num_str = match.group(1)
 
             try:
                 num = int(num_str)
-                ordinal = num2words(num, to='ordinal')
+                ordinal = num2words(num, to="ordinal")
                 return ordinal
             except (ValueError, TypeError):
                 return match.group(0)  # Return original if conversion fails
 
         # Pattern: number + ordinal suffix (st, nd, rd, th)
-        pattern = r'\b(\d+)(st|nd|rd|th)\b'
+        pattern = r"\b(\d+)(st|nd|rd|th)\b"
         return re.sub(pattern, replace_ordinal, text)
 
     def _normalize_latin_abbreviations(self, text: str) -> str:
@@ -150,12 +151,12 @@ class TTSNormalizer:
         """
         # Dictionary of abbreviations to expansions
         abbreviations = {
-            r'\be\.g\.,': r'for example',       # e.g., → for example (remove comma)
-            r'\be\.g\.': r'for example',        # e.g. → for example
-            r'\bi\.e\.,': r'that is',           # i.e., → that is (remove comma)
-            r'\bi\.e\.': r'that is',            # i.e. → that is
-            r'\betc\.': r'et cetera',           # etc. → et cetera
-            r'\bc\.\s*(\d{4})': r'circa \1',    # c. 1943 → circa 1943
+            r"\be\.g\.,": r"for example",  # e.g., → for example (remove comma)
+            r"\be\.g\.": r"for example",  # e.g. → for example
+            r"\bi\.e\.,": r"that is",  # i.e., → that is (remove comma)
+            r"\bi\.e\.": r"that is",  # i.e. → that is
+            r"\betc\.": r"et cetera",  # etc. → et cetera
+            r"\bc\.\s*(\d{4})": r"circa \1",  # c. 1943 → circa 1943
         }
 
         result = text
@@ -174,6 +175,7 @@ class TTSNormalizer:
             1900s → nineteen hundreds
             2000s → the two thousands
         """
+
         def replace_decade(match):
             year_str = match.group(1)
 
@@ -197,9 +199,15 @@ class TTSNormalizer:
                         century_word = num2words(century)
                         # Convert decade digit to proper word with -ies ending
                         decade_names = {
-                            1: "tens", 2: "twenties", 3: "thirties", 4: "forties",
-                            5: "fifties", 6: "sixties", 7: "seventies",
-                            8: "eighties", 9: "nineties"
+                            1: "tens",
+                            2: "twenties",
+                            3: "thirties",
+                            4: "forties",
+                            5: "fifties",
+                            6: "sixties",
+                            7: "seventies",
+                            8: "eighties",
+                            9: "nineties",
                         }
                         decade_word = decade_names.get(
                             decade, f"{num2words(decade * 10)}s"
@@ -212,7 +220,7 @@ class TTSNormalizer:
                 return match.group(0)
 
         # Pattern: 4-digit year + 's'
-        pattern = r'\b(\d{4})s\b'
+        pattern = r"\b(\d{4})s\b"
         return re.sub(pattern, replace_decade, text)
 
     def _normalize_war_numbering(self, text: str) -> str:
@@ -224,10 +232,10 @@ class TTSNormalizer:
         """
         # Specific war patterns
         war_patterns = {
-            r'\bWorld War II\b': 'World War Two',
-            r'\bWorld War I\b': 'World War One',
-            r'\bWWII\b': 'World War Two',
-            r'\bWWI\b': 'World War One',
+            r"\bWorld War II\b": "World War Two",
+            r"\bWorld War I\b": "World War One",
+            r"\bWWII\b": "World War Two",
+            r"\bWWI\b": "World War One",
         }
 
         result = text
@@ -250,4 +258,3 @@ def normalize_for_tts(text: str, phase: str = "all") -> str:
     """
     normalizer = TTSNormalizer()
     return normalizer.normalize(text, phase)
-

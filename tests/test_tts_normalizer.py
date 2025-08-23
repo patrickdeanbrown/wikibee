@@ -1,6 +1,7 @@
 """Tests for TTS text normalization functionality."""
 
 import pytest
+
 from wiki_extractor.tts_normalizer import TTSNormalizer, normalize_for_tts
 
 
@@ -16,20 +17,20 @@ class TestRomanNumeralsInNames:
             ("Louis XVI ruled France", "Louis the sixteenth ruled France"),
             (
                 "Napoleon III established the empire",
-                "Napoleon the third established the empire"
+                "Napoleon the third established the empire",
             ),
             ("Edward IV was a Yorkist king", "Edward the fourth was a Yorkist king"),
             (
                 "Constantine I legalized Christianity",
-                "Constantine the first legalized Christianity"
+                "Constantine the first legalized Christianity",
             ),
         ]
 
         for input_text, expected in test_cases:
             result = normalizer._normalize_royal_names(input_text)
-            assert result == expected, (
-                f"Input: {input_text}, Expected: {expected}, Got: {result}"
-            )
+            assert (
+                result == expected
+            ), f"Input: {input_text}, Expected: {expected}, Got: {result}"
 
     def test_war_names_unchanged(self):
         """Test that war names are not affected by royal name patterns."""
@@ -80,9 +81,9 @@ class TestCenturyOrdinals:
 
         for input_text, expected in test_cases:
             result = normalizer._normalize_century_ordinals(input_text)
-            assert result == expected, (
-                f"Input: {input_text}, Expected: {expected}, Got: {result}"
-            )
+            assert (
+                result == expected
+            ), f"Input: {input_text}, Expected: {expected}, Got: {result}"
 
     def test_mixed_ordinals(self):
         """Test text with multiple ordinal numbers."""
@@ -124,11 +125,11 @@ class TestLatinAbbreviations:
         test_cases = [
             (
                 "This includes, e.g., algorithms",
-                "This includes, for example algorithms"
+                "This includes, for example algorithms",
             ),
             (
                 "Machine learning, i.e., automated pattern recognition",
-                "Machine learning, that is automated pattern recognition"
+                "Machine learning, that is automated pattern recognition",
             ),
             (
                 "Various methods: classification, regression, etc.",
@@ -142,9 +143,9 @@ class TestLatinAbbreviations:
 
         for input_text, expected in test_cases:
             result = normalizer._normalize_latin_abbreviations(input_text)
-            assert result == expected, (
-                f"Input: {input_text}, Expected: {expected}, Got: {result}"
-            )
+            assert (
+                result == expected
+            ), f"Input: {input_text}, Expected: {expected}, Got: {result}"
 
     def test_case_insensitive_abbreviations(self):
         """Test that abbreviations work regardless of case."""
@@ -199,9 +200,9 @@ class TestDecades:
 
         for input_text, expected in test_cases:
             result = normalizer._normalize_decades(input_text)
-            assert result == expected, (
-                f"Input: {input_text}, Expected: {expected}, Got: {result}"
-            )
+            assert (
+                result == expected
+            ), f"Input: {input_text}, Expected: {expected}, Got: {result}"
 
     def test_hundreds_decades(self):
         """Test decades ending in 00s."""
@@ -247,17 +248,15 @@ class TestWarNumbering:
 
         for input_text, expected in test_cases:
             result = normalizer._normalize_war_numbering(input_text)
-            assert result == expected, (
-                f"Input: {input_text}, Expected: {expected}, Got: {result}"
-            )
+            assert (
+                result == expected
+            ), f"Input: {input_text}, Expected: {expected}, Got: {result}"
 
     def test_mixed_war_references(self):
         """Test text with multiple war references."""
         normalizer = TTSNormalizer()
 
-        input_text = (
-            "World War I preceded World War II, and WWII was larger than WWI"
-        )
+        input_text = "World War I preceded World War II, and WWII was larger than WWI"
         expected = (
             "World War One preceded World War Two, and World War Two was "
             "larger than World War One"
@@ -355,8 +354,8 @@ class TestEdgeCases:
         # Test that patterns only match at word boundaries
         test_cases = [
             "Richard33III",  # Should not match
-            "19thabc",      # Should not match
-            "ae.g.bc",      # Should not match as full word
+            "19thabc",  # Should not match
+            "ae.g.bc",  # Should not match as full word
         ]
 
         for text in test_cases:
@@ -382,4 +381,3 @@ class TestEdgeCases:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
-

@@ -5,7 +5,7 @@
 Small utility to extract plain text from Wikipedia articles and produce a TTS-friendly plain text file.
 
 Requirements
-- Python 3.8+
+- Python 3.8-3.13
 - See `requirements.txt` for runtime/dev dependencies.
 
 Quickstart (PowerShell)
@@ -50,8 +50,8 @@ Development
 Run linters and tests (PowerShell)
 
 ```powershell
-# run ruff linter
-.venv\Scripts\ruff check .
+# run pre-commit hooks
+.venv\Scripts\pre-commit run --all-files
 
 # run tests
 .venv\Scripts\pytest -q

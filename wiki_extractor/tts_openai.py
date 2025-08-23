@@ -64,7 +64,7 @@ class TTSOpenAIClient:
 
             create_kwargs = {"model": model, "input": text, "timeout": timeout}
             if voice is not None:
-                create_kwargs['voice'] = voice
+                create_kwargs["voice"] = voice
 
             with self.client.audio.speech.with_streaming_response.create(
                 **create_kwargs

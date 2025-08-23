@@ -1,16 +1,18 @@
 import os
 import sys
+
 import pytest
+
 # Ensure project root is on sys.path so extract.py can be imported
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from extract import (
-    sanitize_filename,
-    make_tts_friendly,
-    extract_wikipedia_text,
-    normalize_for_tts,
     INFLECT_AVAILABLE,
     NetworkError,
+    extract_wikipedia_text,
+    make_tts_friendly,
+    normalize_for_tts,
+    sanitize_filename,
 )
 
 
@@ -23,7 +25,7 @@ def test_sanitize_filename_reserved_name():
 
 
 def test_sanitize_filename_truncation():
-    s = 'a' * 200
+    s = "a" * 200
     out = sanitize_filename(s)
     assert len(out) <= 100
 
@@ -31,8 +33,8 @@ def test_sanitize_filename_truncation():
 def test_make_tts_friendly_header_and_link():
     md = (
         "# Title\n\n"
-    "This is a paragraph with a [link](http://example.com) and *emphasis* "
-    "and `code`."
+        "This is a paragraph with a [link](http://example.com) and *emphasis* "
+        "and `code`."
     )
     tts = make_tts_friendly(md)
     assert "Title." in tts
@@ -86,7 +88,7 @@ def test_number_conversion_if_inflect_available():
 def test_extract_raises_network_error_when_requested():
     class BadSession:
         def get(self, url, params=None, timeout=None):
-            raise requests.exceptions.RequestException('net')
+            raise requests.exceptions.RequestException("net")
 
     # import requests locally to construct exception
     import requests

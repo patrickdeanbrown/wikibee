@@ -81,14 +81,16 @@ class WikiClient:
         # Combine into structured results
         results = []
         for i, title in enumerate(titles):
-            results.append({
-                "title": title,
-                "description": descriptions[i] if i < len(descriptions) else "",
-                "url": (
-                    urls[i]
-                    if i < len(urls)
-                    else f"https://en.wikipedia.org/wiki/{title.replace(' ', '_')}"
-                ),
-            })
+            results.append(
+                {
+                    "title": title,
+                    "description": descriptions[i] if i < len(descriptions) else "",
+                    "url": (
+                        urls[i]
+                        if i < len(urls)
+                        else f"https://en.wikipedia.org/wiki/{title.replace(' ', '_')}"
+                    ),
+                }
+            )
 
         return results

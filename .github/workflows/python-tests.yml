@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         # quote versions to ensure YAML/string handling is preserved
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python ${{ matrix.python-version }}
@@ -23,12 +23,10 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-      - name: Run ruff (lint)
+          pip install -r requirements.txt pre-commit
+      - name: Run pre-commit
         run: |
-          pip install ruff
-          ruff --version
-          ruff check .
+          pre-commit run --show-diff-on-failure --color=always --all-files
       - name: Run tests
         run: |
           pytest -q
