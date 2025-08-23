@@ -65,4 +65,3 @@ wiki-extractor -a "https://en.wikipedia.org/wiki/Homer" --tts-file -o output
 # run via module
 python -m wiki_extractor -a "https://en.wikipedia.org/wiki/Homer" --tts-file -o output
 ```
-
