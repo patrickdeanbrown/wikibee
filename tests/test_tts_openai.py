@@ -1,8 +1,9 @@
 import os
+
 import pytest
 
 from wiki_extractor import tts_openai
-from wiki_extractor.tts_openai import TTSOpenAIClient, TTSClientError
+from wiki_extractor.tts_openai import TTSClientError, TTSOpenAIClient
 
 
 class FakeResponse:
@@ -40,15 +41,19 @@ class FakeOpenAIClient:
         # build the nested attribute chain audio.speech.with_streaming_response.create
         self.captured = captured
         self._create = FakeCreate(self.captured, data=data)
+
         class WS:
             def __init__(self, create):
                 self.create = create
+
         class Speech:
             def __init__(self, ws):
                 self.with_streaming_response = ws
+
         class Audio:
             def __init__(self, speech):
                 self.speech = speech
+
         self.audio = Audio(Speech(WS(self._create)))
 
 
@@ -102,8 +107,10 @@ def test_streaming_raises_and_bubbles(monkeypatch, tmp_path):
             class BadResp:
                 def __enter__(self):
                     raise RuntimeError("stream failure")
+
                 def __exit__(self, exc_type, exc, tb):
                     return False
+
             return BadResp()
 
     fake_client = type("C", (), {})()

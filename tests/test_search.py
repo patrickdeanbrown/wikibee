@@ -1,12 +1,13 @@
 """Tests for Wikipedia search functionality."""
 
+from unittest.mock import MagicMock, patch
+
 import pytest
 import requests
 import requests_mock
-from unittest.mock import patch, MagicMock
 
-from wiki_extractor.client import WikiClient
 from wiki_extractor.cli import _handle_search, _show_search_menu
+from wiki_extractor.client import WikiClient
 
 
 class TestWikiClientSearch:
@@ -24,8 +25,8 @@ class TestWikiClientSearch:
             [
                 "https://en.wikipedia.org/wiki/Result_1",
                 "https://en.wikipedia.org/wiki/Result_2",
-                "https://en.wikipedia.org/wiki/Result_3"
-            ]
+                "https://en.wikipedia.org/wiki/Result_3",
+            ],
         ]
 
         with requests_mock.Mocker() as m:
@@ -71,7 +72,7 @@ class TestWikiClientSearch:
         with requests_mock.Mocker() as m:
             m.get(
                 "https://en.wikipedia.org/w/api.php",
-                exc=requests.RequestException("Network error")
+                exc=requests.RequestException("Network error"),
             )
 
             with pytest.raises(requests.RequestException):
@@ -81,14 +82,17 @@ class TestWikiClientSearch:
 class TestSearchHandling:
     """Test CLI search handling logic."""
 
-    @patch('wiki_extractor.cli.WikiClient')
+    @patch("wiki_extractor.cli.WikiClient")
     def test_handle_search_single_result(self, mock_client_class, capsys):
         """Test auto-selection when single result found."""
         mock_client = MagicMock()
         mock_client_class.return_value = mock_client
 
         mock_client.search_articles.return_value = [
-            {"title": "Test Article", "url": "https://en.wikipedia.org/wiki/Test_Article"}
+            {
+                "title": "Test Article",
+                "url": "https://en.wikipedia.org/wiki/Test_Article",
+            }
         ]
 
         args = MagicMock()
@@ -100,7 +104,7 @@ class TestSearchHandling:
         captured = capsys.readouterr()
         assert "Found exact match" in captured.out
 
-    @patch('wiki_extractor.cli.WikiClient')
+    @patch("wiki_extractor.cli.WikiClient")
     def test_handle_search_no_results(self, mock_client_class, capsys):
         """Test handling when no results found."""
         mock_client = MagicMock()
@@ -117,15 +121,21 @@ class TestSearchHandling:
         captured = capsys.readouterr()
         assert "No results found" in captured.out
 
-    @patch('wiki_extractor.cli.WikiClient')
+    @patch("wiki_extractor.cli.WikiClient")
     def test_handle_search_yolo_multiple_results(self, mock_client_class, capsys):
         """Test --yolo flag auto-selects first result."""
         mock_client = MagicMock()
         mock_client_class.return_value = mock_client
 
         mock_client.search_articles.return_value = [
-            {"title": "First Result", "url": "https://en.wikipedia.org/wiki/First_Result"},
-            {"title": "Second Result", "url": "https://en.wikipedia.org/wiki/Second_Result"}
+            {
+                "title": "First Result",
+                "url": "https://en.wikipedia.org/wiki/First_Result",
+            },
+            {
+                "title": "Second Result",
+                "url": "https://en.wikipedia.org/wiki/Second_Result",
+            },
         ]
 
         args = MagicMock()
@@ -138,7 +148,7 @@ class TestSearchHandling:
         captured = capsys.readouterr()
         assert "Auto-selected" in captured.out
 
-    @patch('wiki_extractor.cli.WikiClient')
+    @patch("wiki_extractor.cli.WikiClient")
     def test_handle_search_network_error(self, mock_client_class, capsys):
         """Test handling network errors gracefully."""
         mock_client = MagicMock()
@@ -161,12 +171,12 @@ class TestSearchHandling:
 class TestSearchMenu:
     """Test interactive search menu."""
 
-    @patch('builtins.input', return_value='1')
+    @patch("builtins.input", return_value="1")
     def test_show_search_menu_valid_selection(self, mock_input, capsys):
         """Test valid menu selection."""
         results = [
             {"title": "Result 1", "url": "https://en.wikipedia.org/wiki/Result_1"},
-            {"title": "Result 2", "url": "https://en.wikipedia.org/wiki/Result_2"}
+            {"title": "Result 2", "url": "https://en.wikipedia.org/wiki/Result_2"},
         ]
 
         url = _show_search_menu(results, "test")
@@ -176,7 +186,7 @@ class TestSearchMenu:
         assert "Found 2 results" in captured.out
         assert "Selected: Result 1" in captured.out
 
-    @patch('builtins.input', return_value='q')
+    @patch("builtins.input", return_value="q")
     def test_show_search_menu_quit(self, mock_input, capsys):
         """Test quitting from menu."""
         results = [
@@ -189,7 +199,7 @@ class TestSearchMenu:
         captured = capsys.readouterr()
         assert "Cancelled" in captured.out
 
-    @patch('builtins.input', side_effect=['invalid', '99', '1'])
+    @patch("builtins.input", side_effect=["invalid", "99", "1"])
     def test_show_search_menu_invalid_then_valid(self, mock_input, capsys):
         """Test handling invalid input then valid selection."""
         results = [

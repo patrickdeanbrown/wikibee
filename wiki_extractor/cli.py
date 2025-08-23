@@ -6,11 +6,12 @@ import logging
 import os
 from typing import Optional, Tuple
 
-from .client import WikiClient
 import requests
+
 from . import formatting as _formatting
-from .tts_openai import TTSOpenAIClient, TTSClientError
+from .client import WikiClient
 from .tts_normalizer import normalize_for_tts as tts_normalize_for_tts
+from .tts_openai import TTSClientError, TTSOpenAIClient
 
 # Re-export frequently used formatting helpers for backward compatibility.
 # Import the module and assign names so linters don't report unused imports.
@@ -25,14 +26,14 @@ logger = logging.getLogger(__name__)
 
 # ANSI color codes for terminal output
 class Colors:
-    BLUE = '\033[94m'
-    GREEN = '\033[92m'
-    YELLOW = '\033[93m'
-    RED = '\033[91m'
-    CYAN = '\033[96m'
-    MAGENTA = '\033[95m'
-    BOLD = '\033[1m'
-    END = '\033[0m'
+    BLUE = "\033[94m"
+    GREEN = "\033[92m"
+    YELLOW = "\033[93m"
+    RED = "\033[91m"
+    CYAN = "\033[96m"
+    MAGENTA = "\033[95m"
+    BOLD = "\033[1m"
+    END = "\033[0m"
 
 
 def _handle_search(search_term: str, args) -> Optional[str]:
@@ -94,7 +95,7 @@ def _show_search_menu(results: list[dict], search_term: str) -> Optional[str]:
             )
             choice = input(prompt).strip().lower()
 
-            if choice == 'q':
+            if choice == "q":
                 print(f"{Colors.MAGENTA}Cancelled{Colors.END}")
                 return None
 
@@ -133,7 +134,7 @@ class DisambiguationError(RuntimeError):
 
 
 def _parse_title(u: str) -> str:
-    from urllib.parse import urlparse, unquote
+    from urllib.parse import unquote, urlparse
 
     parsed = urlparse(u)
     if not parsed.scheme:
@@ -159,9 +160,7 @@ def _process_page(p: dict, convert_numbers_for_tts: bool, raise_on_error: bool):
         final_title = p.get("title")
         logger.info("Disambiguation page detected for: %s", final_title)
         if raise_on_error:
-            raise DisambiguationError(
-                f"Title '{final_title}' is a disambiguation page"
-            )
+            raise DisambiguationError(f"Title '{final_title}' is a disambiguation page")
         return None, final_title
 
     final_title = p.get("title")
@@ -169,14 +168,10 @@ def _process_page(p: dict, convert_numbers_for_tts: bool, raise_on_error: bool):
     if extract_text is None:
         logger.warning("No extract text present for page: %s", final_title)
         if raise_on_error:
-            raise NotFoundError(
-                f"No extract text present for page: {final_title}"
-            )
+            raise NotFoundError(f"No extract text present for page: {final_title}")
         return None, final_title
 
-    out_text = normalize_for_tts(
-        extract_text, convert_numbers=convert_numbers_for_tts
-    )
+    out_text = normalize_for_tts(extract_text, convert_numbers=convert_numbers_for_tts)
     return out_text, final_title
 
 
@@ -218,17 +213,13 @@ def extract_wikipedia_text(
 
 def main():
     parser = argparse.ArgumentParser(
-        description=(
-            "Extract plain text from a Wikipedia article"
-        )
+        description=("Extract plain text from a Wikipedia article")
     )
     parser.add_argument(
         "-a",
         "--article",
         required=True,
-        help=(
-            "Wikipedia article URL or search term"
-        ),
+        help=("Wikipedia article URL or search term"),
     )
     parser.add_argument(
         "-o",
@@ -239,9 +230,7 @@ def main():
     parser.add_argument(
         "-f",
         "--filename",
-        help=(
-            "Base filename to use (otherwise derived from title)"
-        ),
+        help=("Base filename to use (otherwise derived from title)"),
     )
     parser.add_argument(
         "--no-save",
@@ -262,16 +251,12 @@ def main():
     parser.add_argument(
         "--tts-file",
         action="store_true",
-        help=(
-            "Also produce a TTS-friendly .txt alongside the .md"
-        ),
+        help=("Also produce a TTS-friendly .txt alongside the .md"),
     )
     parser.add_argument(
         "--heading-prefix",
         default=None,
-        help=(
-            "Prefix for headings in TTS file, e.g. 'Section:'"
-        ),
+        help=("Prefix for headings in TTS file, e.g. 'Section:'"),
     )
     parser.add_argument(
         "-v",
@@ -290,8 +275,8 @@ def main():
         help="Base URL of the local TTS server (OpenAI-compatible)",
     )
     parser.add_argument(
-    "--tts-voice",
-    default="af_sky+af_bella",
+        "--tts-voice",
+        default="af_sky+af_bella",
         help="Voice identifier for the TTS engine",
     )
     parser.add_argument(
@@ -346,9 +331,9 @@ def main():
         logger.error("Failed to extract text from URL")
         return
 
-    base_name = args.filename or page_title or 'wikipedia_article'
+    base_name = args.filename or page_title or "wikipedia_article"
     safe_base = sanitize_filename(base_name)
-    md_name = safe_base + '.md'
+    md_name = safe_base + ".md"
     out_dir = os.path.abspath(args.output_dir)
     os.makedirs(out_dir, exist_ok=True)
 
@@ -364,7 +349,8 @@ def main():
     try:
         _write_outputs(args, markdown_content, md_path, out_dir, page_title)
     except IOError as e:
-        logger.error('Failed to write output: %s', e)
+        logger.error("Failed to write output: %s", e)
+
 
 def _produce_audio(
     markdown_content: str,
@@ -372,15 +358,15 @@ def _produce_audio(
     out_dir: str,
     args,
 ):
-    audio_ext = '.' + args.tts_format
+    audio_ext = "." + args.tts_format
     audio_path = os.path.splitext(md_path)[0] + audio_ext
     text_source = _build_tts_text(markdown_content, args)
     try:
         saved = _synthesize_audio(text_source, audio_path, out_dir, args)
-        logger.info('Saved audio to %s', saved)
-        print(f'Audio saved to: {saved}')
+        logger.info("Saved audio to %s", saved)
+        print(f"Audio saved to: {saved}")
     except TTSClientError as e:
-        logger.error('Failed to synthesize audio: %s', e)
+        logger.error("Failed to synthesize audio: %s", e)
 
 
 def _build_tts_text(markdown_content: str, args) -> str:
@@ -402,7 +388,7 @@ def _synthesize_audio(text: str, audio_path: str, out_dir: str, args) -> str:
         text,
         dest_path=audio_path,
         base_dir=out_dir,
-        model='kokoro',
+        model="kokoro",
         voice=args.tts_voice,
         file_format=args.tts_format,
     )
@@ -420,9 +406,9 @@ def _write_outputs(
         print(markdown_content)
         return
 
-    with open(md_path, 'w', encoding='utf-8') as f:
+    with open(md_path, "w", encoding="utf-8") as f:
         f.write(markdown_content)
-    logger.info('Saved markdown to %s', md_path)
+    logger.info("Saved markdown to %s", md_path)
     print(f"Output saved to: {md_path}")
 
     if args.tts_file:
@@ -434,16 +420,15 @@ def _write_outputs(
         tts_text = make_tts_friendly(
             content_for_tts, heading_prefix=args.heading_prefix
         )
-        tts_path = os.path.splitext(md_path)[0] + '.txt'
-        with open(tts_path, 'w', encoding='utf-8') as f:
+        tts_path = os.path.splitext(md_path)[0] + ".txt"
+        with open(tts_path, "w", encoding="utf-8") as f:
             f.write(tts_text)
-        logger.info('Saved TTS-friendly text to %s', tts_path)
+        logger.info("Saved TTS-friendly text to %s", tts_path)
         print(f"TTS-friendly copy saved to: {tts_path}")
 
     if args.tts_audio:
         _produce_audio(markdown_content, md_path, out_dir, args)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
-
