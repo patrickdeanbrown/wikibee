@@ -36,10 +36,7 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
 # Install dependencies
 pip install --upgrade pip
-pip install -r requirements.txt
-
-# Install in editable mode (enables console script)
-pip install -e .
+pip install -e .[dev]
 ```
 
 Testing and linting:
@@ -105,5 +102,5 @@ The code uses structured exceptions:
 - **Ruff**: Line length 88 characters (strictly enforced), linting rules in `pyproject.toml`
 - **Code style**: All lines must be ≤88 characters to pass linting
 - **Pytest**: Configuration in `setup.cfg`
-- **Console script**: `wiki-extractor` entry point defined in `setup.cfg`
+- **Console script**: `wiki-extractor` entry point defined in `pyproject.toml`
 - **TTS defaults**: Kokoro voice `af_sky+af_bella`, MP3 format, localhost:8880 server
