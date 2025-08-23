@@ -20,12 +20,25 @@ python -m venv .venv
 .venv\Scripts\python -m pip install -r requirements.txt
 
 # extract an article and produce TTS file
-.venv\Scripts\python extract.py "https://en.wikipedia.org/wiki/Homer" --tts-file --heading-prefix "Section:" -o output
+.venv\Scripts\python extract.py -a "https://en.wikipedia.org/wiki/Homer" --tts-file --heading-prefix "Section:" -o output
 ```
 
 Usage
 
-- CLI flags: `--output-dir`, `--filename`, `--no-save`, `--timeout`, `--lead-only`, `--tts-file`, `--heading-prefix`, `--verbose`.
+- CLI flags: `--article/-a` (required), `--yolo/-y`, `--output-dir`, `--filename`, `--no-save`, `--timeout`, `--lead-only`, `--tts-file`, `--heading-prefix`, `--verbose`.
+
+**New Search Feature**: The tool now accepts both Wikipedia URLs and free-form search terms:
+
+```powershell
+# URL (traditional)
+.venv\Scripts\python extract.py -a "https://en.wikipedia.org/wiki/Homer" --tts-file -o output
+
+# Search term with fuzzy matching
+.venv\Scripts\python extract.py -a "homer ancient greek poet" --tts-file -o output
+
+# Auto-select first result (--yolo)
+.venv\Scripts\python extract.py -a "homer poet" --yolo --tts-file -o output
+```
 
 Notes
 - The TTS file strips Markdown markers (including `#`) so TTS engines like Kokoro won't say "number" for headings.
@@ -51,7 +64,7 @@ You can run the tool as a package module as an alternative to the top-level scri
 
 ```powershell
 # run via module
-.venv\Scripts\python -m wiki_extractor "https://en.wikipedia.org/wiki/Homer" --tts-file -o output
+.venv\Scripts\python -m wiki_extractor -a "https://en.wikipedia.org/wiki/Homer" --tts-file -o output
 ```
 
 If you install the project in editable mode during development the `console_scripts` entrypoint will be available as `wiki-extractor`:
@@ -61,5 +74,5 @@ If you install the project in editable mode during development the `console_scri
 .venv\Scripts\python -m pip install -e .
 
 # then run
-wiki-extractor "https://en.wikipedia.org/wiki/Homer" --tts-file -o output
+wiki-extractor -a "https://en.wikipedia.org/wiki/Homer" --tts-file -o output
 ```
