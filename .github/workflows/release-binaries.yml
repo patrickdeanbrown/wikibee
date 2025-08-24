@@ -9,123 +9,159 @@ permissions:
 
 jobs:
   build:
-    name: Build ${{ matrix.os }} binary
-    runs-on: ${{ matrix.os }}
+    name: Build ${{ matrix.os }}-${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu
+            runner: ubuntu-latest
+            arch: x86_64
+          - os: macos
+            runner: macos-latest     # Apple Silicon (arm64)
+            arch: arm64
+          - os: macos
+            runner: macos-13         # Intel (x86_64)
+            arch: x86_64
+          - os: windows
+            runner: windows-latest
+            arch: x86_64
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
+      # Pin to a PyInstaller-friendly Python; avoids sudden 3.13 breakage
+      - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: "3.x"
+          python-version: "3.12"
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install . pyinstaller
 
-      - name: Build binary
-        run: pyinstaller wiki_extractor/cli.py --name wiki-extractor --onefile
+      # Build: onedir for macOS (so we can sign every binary), onefile elsewhere
+      - name: Build (macOS onedir)
+        if: runner.os == 'macOS'
+        run: |
+          pyinstaller wiki_extractor/cli.py --name wiki-extractor --onedir
 
-      # macOS: sign CLI, build DMG, notarize DMG, staple DMG
-      - name: Sign & Notarize macOS DMG
+      - name: Build (Linux/Windows onefile)
+        if: runner.os != 'macOS'
+        run: |
+          pyinstaller wiki_extractor/cli.py --name wiki-extractor --onefile
+
+      # --- macOS: sign everything in the onedir, DMG -> notarize -> staple ---
+      - name: Sign & Notarize macOS DMG (onedir)
         if: runner.os == 'macOS'
         env:
-          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}                 # base64 .p12 (Developer ID Application + private key)
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}                 # base64-encoded .p12 (Developer ID Application + private key)
           MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
           APPLE_DEVELOPER_ID: ${{ secrets.APPLE_DEVELOPER_ID }}               # Apple ID email
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        shell: bash
         run: |
-          set -euxo pipefail
+          set -euo pipefail
 
-          # --- Keychain setup (use the real *.keychain-db path) ---
+          # Keychain setup (use real *.keychain-db path)
           echo "$MACOS_CERTIFICATE" | base64 --decode > certificate.p12
           KEYCHAIN_NAME="build.keychain-db"
           KEYCHAIN_PATH="$HOME/Library/Keychains/$KEYCHAIN_NAME"
 
           security create-keychain -p temp "$KEYCHAIN_NAME"
-          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"     # keep unlocked for 6h
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"     # keep unlocked ~6h
           security unlock-keychain -p temp "$KEYCHAIN_PATH"
-
-          # Import the p12, allow /usr/bin/codesign, and grant ACL (-A) for tool access
           security import certificate.p12 -k "$KEYCHAIN_PATH" -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -A
-
-          # Make sure codesign can actually search this keychain
           security list-keychains -d user -s "$KEYCHAIN_PATH"
           security default-keychain -s "$KEYCHAIN_PATH"
-
-          # Allow Apple tools to access the key without UI prompts
           security set-key-partition-list -S apple-tool:,apple: -s -k temp "$KEYCHAIN_PATH"
 
-          # --- Resolve the identity SHA (more reliable than the display name) ---
+          # Resolve identity SHA (more reliable than display name)
           security find-identity -v -p codesigning "$KEYCHAIN_PATH"
-          IDENTITY_SHA=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | awk '/Developer ID Application/ {print $2; exit}')
-          test -n "$IDENTITY_SHA"
+          ID_SHA=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | awk '/Developer ID Application/ {print $2; exit}')
+          test -n "$ID_SHA"
 
-          # --- Sign the CLI (no --deep needed for a one-file binary) ---
-          codesign --force --options runtime --timestamp \
-            --keychain "$KEYCHAIN_PATH" --sign "$IDENTITY_SHA" dist/wiki-extractor
+          APPDIR="dist/wiki-extractor"           # PyInstaller onedir output
+          MAINEXE="$APPDIR/wiki-extractor"
 
-          # Optional local check (won’t fail the build if Gatekeeper is picky on CI)
-          spctl --assess --type exec -vvv dist/wiki-extractor || true
+          # Sign inner binaries first (dylibs, .so/.pyd, embedded 'Python' files)
+          # Note: xargs -0 handles spaces safely; some dirs may not exist in all builds, so || true
+          find "$APPDIR" -type f \( -name "*.dylib" -o -name "*.so" -o -name "*.pyd" -o -name "Python" \) -print0 \
+            | xargs -0 -I{} codesign --force --timestamp --options runtime --keychain "$KEYCHAIN_PATH" --sign "$ID_SHA" "{}" || true
 
-          # --- Build the DMG contents ---
+          # Sign frameworks as bundles (after inner files)
+          find "$APPDIR" -type d -name "*.framework" -print0 \
+            | xargs -0 -I{} codesign --force --timestamp --options runtime --keychain "$KEYCHAIN_PATH" --sign "$ID_SHA" "{}" || true
+
+          # Sign the main executable last
+          codesign --force --timestamp --options runtime --keychain "$KEYCHAIN_PATH" --sign "$ID_SHA" "$MAINEXE"
+
+          # Local verification (don’t fail CI if Gatekeeper is picky)
+          codesign -dv --verbose=4 "$MAINEXE" || true
+          spctl --assess --type exec -vvv "$MAINEXE" || true
+
+          # Build DMG from the onedir tree (read-only DMG preserves signatures)
           mkdir -p dist/dmgroot
-          cp dist/wiki-extractor dist/dmgroot/
+          cp -a "$APPDIR" dist/dmgroot/
           cat > dist/dmgroot/README.txt <<'EOF'
           WikiExtractor (CLI)
           --------------------
-          1) Drag 'wiki-extractor' somewhere on your machine, e.g., /usr/local/bin
-             (you may need: sudo mv ~/Downloads/wiki-extractor /usr/local/bin/)
-          2) Make sure it's executable: chmod +x /usr/local/bin/wiki-extractor
-          3) Run from Terminal: wiki-extractor --help
+          Option A: Run directly from inside the folder:
+            ./wiki-extractor/wiki-extractor --help
 
-          This binary is signed; the DMG is notarized and stapled by Apple.
+          Option B (recommended): copy the executable into your PATH:
+            sudo cp wiki-extractor/wiki-extractor /usr/local/bin/
+            wiki-extractor --help
           EOF
 
+          DMG_PATH="dist/wiki-extractor-macos-${{ matrix.arch }}.dmg"
           hdiutil create -volname "WikiExtractor" \
             -srcfolder dist/dmgroot \
-            -ov -fs HFS+ -format UDZO dist/wiki-extractor-macos.dmg
+            -ov -fs HFS+ -format UDZO "$DMG_PATH"
 
-          # --- Notarize the DMG and wait ---
-          xcrun notarytool submit dist/wiki-extractor-macos.dmg \
+          # Notarize + staple the DMG
+          xcrun notarytool submit "$DMG_PATH" \
             --apple-id "$APPLE_DEVELOPER_ID" \
             --password "$APPLE_APP_SPECIFIC_PASSWORD" \
             --team-id "$APPLE_TEAM_ID" \
             --wait
 
-          # --- Staple & validate the DMG ---
-          xcrun stapler staple dist/wiki-extractor-macos.dmg
-          xcrun stapler validate dist/wiki-extractor-macos.dmg
-          spctl --assess --type open -vvv dist/wiki-extractor-macos.dmg || true
+          xcrun stapler staple "$DMG_PATH"
+          xcrun stapler validate "$DMG_PATH"
+          spctl --assess --type open -vvv "$DMG_PATH" || true
 
-          # --- Cleanup secrets/materials ---
+          # Cleanup secrets/materials
           security delete-keychain "$KEYCHAIN_PATH"
           rm -f certificate.p12
           rm -rf dist/dmgroot
 
-      # Rename artifacts for release (Linux/Windows keep your original pattern; macOS is now a DMG)
-      - name: Rename artifact for release
-        run: |
-          if [ "${{ runner.os }}" == "Linux" ]; then
-            mv dist/wiki-extractor dist/wiki-extractor-linux
-          elif [ "${{ runner.os }}" == "macOS" ]; then
-            # Already named dist/wiki-extractor-macos.dmg above
-            :
-          elif [ "${{ runner.os }}" == "Windows" ]; then
-            mv dist/wiki-extractor.exe dist/wiki-extractor-windows.exe
-          fi
-        shell: bash
+      # --- Rename & upload artifacts per-OS ---
 
-      - name: Upload release asset(s)
+      - name: Rename Linux artifact
+        if: runner.os == 'Linux'
+        run: mv dist/wiki-extractor dist/wiki-extractor-linux-x86_64
+
+      - name: Rename Windows artifact
+        if: runner.os == 'Windows'
+        run: mv dist/wiki-extractor.exe dist/wiki-extractor-windows-x86_64.exe
+
+      - name: Upload macOS DMG
+        if: runner.os == 'macOS'
         uses: softprops/action-gh-release@v1
         with:
-          files: |
-            dist/wiki-extractor-linux
-            dist/wiki-extractor-windows.exe
-            dist/wiki-extractor-macos.dmg
+          files: dist/wiki-extractor-macos-${{ matrix.arch }}.dmg
+
+      - name: Upload Linux artifact
+        if: runner.os == 'Linux'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/wiki-extractor-linux-x86_64
+
+      - name: Upload Windows artifact
+        if: runner.os == 'Windows'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/wiki-extractor-windows-x86_64.exe
