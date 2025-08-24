@@ -53,7 +53,12 @@ jobs:
           ditto -c -k --sequesterRsrc --keepParent dist/wiki-extractor dist/wiki-extractor.zip
           # 2. Submit for notarization
           xcrun notarytool submit dist/wiki-extractor.zip --apple-id "$APPLE_DEVELOPER_ID" --password "$APPLE_APP_SPECIFIC_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait
-          # 3. Staple the notarization ticket to the original binary
+          
+          # 3. Add a delay to wait for the ticket to become available
+          echo "Waiting 60 seconds for notarization ticket to propagate..."
+          sleep 60
+          
+          # 4. Staple the notarization ticket to the original binary
           xcrun stapler staple dist/wiki-extractor
           
       - name: Rename binary for release
