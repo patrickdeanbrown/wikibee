@@ -42,7 +42,7 @@ jobs:
       # Build: onefile everywhere (macOS will be signed with LV entitlement)
       - name: Build (PyInstaller onefile)
         run: |
-          pyinstaller wiki_extractor/cli.py --name wiki-extractor --onefile
+          pyinstaller -m wiki_extractor.cli --name wiki-extractor --onefile
 
       # ---------- macOS: sign single-file with LV entitlement, ZIP-notarize (no stapling) ----------
       - name: Sign & Notarize macOS single-file (ZIP; no stapling)
