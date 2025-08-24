@@ -35,7 +35,7 @@ jobs:
       - name: Sign & Notarize macOS DMG
         if: runner.os == 'macOS'
         env:
-          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}                 # base64-encoded .p12
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}                 # base64 .p12 (Developer ID Application + private key)
           MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
           APPLE_DEVELOPER_ID: ${{ secrets.APPLE_DEVELOPER_ID }}               # Apple ID email
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
@@ -43,25 +43,38 @@ jobs:
         run: |
           set -euxo pipefail
 
-          # 0) Prepare keychain with Developer ID Application certificate
+          # --- Keychain setup (use the real *.keychain-db path) ---
           echo "$MACOS_CERTIFICATE" | base64 --decode > certificate.p12
-          security create-keychain -p temp build.keychain
-          security unlock-keychain -p temp build.keychain
-          security import certificate.p12 -k build.keychain -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple: -s -k temp build.keychain
+          KEYCHAIN_NAME="build.keychain-db"
+          KEYCHAIN_PATH="$HOME/Library/Keychains/$KEYCHAIN_NAME"
 
-          # Resolve the exact identity string for safety
-          IDENTITY=$(security find-identity -v -p codesigning build.keychain | awk -F\" '/Developer ID Application/ {print $2; exit}')
-          echo "Using signing identity: $IDENTITY"
+          security create-keychain -p temp "$KEYCHAIN_NAME"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"     # keep unlocked for 6h
+          security unlock-keychain -p temp "$KEYCHAIN_PATH"
 
-          # 1) Sign the CLI binary (hardened runtime + timestamp)
+          # Import the p12, allow /usr/bin/codesign, and grant ACL (-A) for tool access
+          security import certificate.p12 -k "$KEYCHAIN_PATH" -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -A
+
+          # Make sure codesign can actually search this keychain
+          security list-keychains -d user -s "$KEYCHAIN_PATH"
+          security default-keychain -s "$KEYCHAIN_PATH"
+
+          # Allow Apple tools to access the key without UI prompts
+          security set-key-partition-list -S apple-tool:,apple: -s -k temp "$KEYCHAIN_PATH"
+
+          # --- Resolve the identity SHA (more reliable than the display name) ---
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+          IDENTITY_SHA=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | awk '/Developer ID Application/ {print $2; exit}')
+          test -n "$IDENTITY_SHA"
+
+          # --- Sign the CLI (no --deep needed for a one-file binary) ---
           codesign --force --options runtime --timestamp \
-            --keychain build.keychain --sign "$IDENTITY" dist/wiki-extractor
+            --keychain "$KEYCHAIN_PATH" --sign "$IDENTITY_SHA" dist/wiki-extractor
 
-          # Optional local Gatekeeper assessment of the binary itself
+          # Optional local check (won’t fail the build if Gatekeeper is picky on CI)
           spctl --assess --type exec -vvv dist/wiki-extractor || true
 
-          # 2) Stage files into a DMG root
+          # --- Build the DMG contents ---
           mkdir -p dist/dmgroot
           cp dist/wiki-extractor dist/dmgroot/
           cat > dist/dmgroot/README.txt <<'EOF'
@@ -75,25 +88,24 @@ jobs:
           This binary is signed; the DMG is notarized and stapled by Apple.
           EOF
 
-          # 3) Create compressed DMG
           hdiutil create -volname "WikiExtractor" \
             -srcfolder dist/dmgroot \
             -ov -fs HFS+ -format UDZO dist/wiki-extractor-macos.dmg
 
-          # 4) Notarize the DMG and wait for result
+          # --- Notarize the DMG and wait ---
           xcrun notarytool submit dist/wiki-extractor-macos.dmg \
             --apple-id "$APPLE_DEVELOPER_ID" \
             --password "$APPLE_APP_SPECIFIC_PASSWORD" \
             --team-id "$APPLE_TEAM_ID" \
             --wait
 
-          # 5) Staple the DMG and validate
+          # --- Staple & validate the DMG ---
           xcrun stapler staple dist/wiki-extractor-macos.dmg
           xcrun stapler validate dist/wiki-extractor-macos.dmg
           spctl --assess --type open -vvv dist/wiki-extractor-macos.dmg || true
 
-          # Cleanup secrets
-          security delete-keychain build.keychain
+          # --- Cleanup secrets/materials ---
+          security delete-keychain "$KEYCHAIN_PATH"
           rm -f certificate.p12
           rm -rf dist/dmgroot
 
