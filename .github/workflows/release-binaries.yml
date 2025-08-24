@@ -1,12 +1,3 @@
-name: release-binaries
-
-on:
-  release:
-    types: [published]
-
-permissions:
-  contents: write
-
 jobs:
   build:
     name: Build ${{ matrix.os }} binary
@@ -27,6 +18,35 @@ jobs:
       - name: Build binary
         run: pyinstaller wiki_extractor/cli.py --name wiki-extractor --onefile
 
+      # Steps for macOS signing and notarization
+      - name: Sign and Notarize macOS App
+        if: runner.os == 'macOS'
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          APPLE_DEVELOPER_ID: ${{ secrets.APPLE_DEVELOPER_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          # Import certificate from secrets
+          echo $MACOS_CERTIFICATE | base64 --decode > certificate.p12
+          security create-keychain -p "temp" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "temp" build.keychain
+          security import certificate.p12 -k build.keychain -P $MACOS_CERTIFICATE_PASSWORD -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "temp" build.keychain
+
+          # Sign the binary
+          codesign --force -s "Developer ID Application" --keychain build.keychain --deep --options=runtime dist/wiki-extractor
+
+          # Notarize the binary
+          # 1. Create a zip archive for the notarization service
+          ditto -c -k --sequesterRsrc --keepParent dist/wiki-extractor dist/wiki-extractor.zip
+          # 2. Submit for notarization
+          xcrun notarytool submit dist/wiki-extractor.zip --apple-id "$APPLE_DEVELOPER_ID" --password "$APPLE_APP_SPECIFIC_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait
+          # 3. Staple the notarization ticket to the original binary
+          xcrun stapler staple dist/wiki-extractor
+          
       - name: Rename binary for release
         run: |
           if [ "${{ runner.os }}" == "Linux" ]; then
@@ -37,7 +57,7 @@ jobs:
             mv dist/wiki-extractor.exe dist/wiki-extractor-windows.exe
           fi
         shell: bash
-
+        
       - name: Upload release asset
         uses: softprops/action-gh-release@v1
         with:
