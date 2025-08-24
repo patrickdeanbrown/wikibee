@@ -44,8 +44,8 @@ jobs:
         run: |
           pyinstaller -m wiki_extractor.cli --name wiki-extractor --onefile
 
-      # ---------- macOS: sign single-file with LV entitlement, ZIP-notarize (no stapling) ----------
-      - name: Sign & Notarize macOS single-file (ZIP; no stapling)
+      # ---------- macOS: sign single-file with LV entitlement, notarize, staple and zip ----------
+      - name: Sign, Notarize, Staple & ZIP macOS single-file
         if: runner.os == 'macOS'
         env:
           MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}                 # base64-encoded .p12 (Developer ID Application + private key)
@@ -108,12 +108,17 @@ jobs:
           # ZIP the single file for notarization (Apple scans the binary inside)
           /usr/bin/zip -q -j "$ZIP_FILE" "$OUT_FILE"
 
-          # Notarize and wait for the result (no stapling for raw executables)
+          # Notarize and wait for the result
           xcrun notarytool submit "$ZIP_FILE" \
             --apple-id "$APPLE_DEVELOPER_ID" \
             --password "$APPLE_APP_SPECIFIC_PASSWORD" \
             --team-id "$APPLE_TEAM_ID" \
             --wait
+
+          # Staple the ticket and re-ZIP the binary for release
+          xcrun stapler staple "$OUT_FILE"
+          rm -f "$ZIP_FILE"
+          /usr/bin/zip -q -j "$ZIP_FILE" "$OUT_FILE"
 
           # Cleanup secrets/materials
           security delete-keychain "$KEYCHAIN_PATH"
@@ -129,11 +134,11 @@ jobs:
         run: mv dist/wiki-extractor.exe dist/wiki-extractor-windows-x86_64.exe
 
       # ---------- Upload per-OS artifacts ----------
-      - name: Upload macOS single-file
+      - name: Upload macOS zip
         if: runner.os == 'macOS'
         uses: softprops/action-gh-release@v1
         with:
-          files: dist/wiki-extractor-macos-${{ matrix.arch }}
+          files: dist/wiki-extractor-macos-${{ matrix.arch }}.zip
 
       - name: Upload Linux artifact
         if: runner.os == 'Linux'
