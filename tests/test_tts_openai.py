@@ -2,8 +2,8 @@ import os
 
 import pytest
 
-from wiki_extractor import tts_openai
-from wiki_extractor.tts_openai import TTSClientError, TTSOpenAIClient
+from wikibee import tts_openai
+from wikibee.tts_openai import TTSClientError, TTSOpenAIClient
 
 
 class FakeResponse:

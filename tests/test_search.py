@@ -6,8 +6,8 @@ import pytest
 import requests
 import requests_mock
 
-from wiki_extractor.cli import _handle_search, _show_search_menu
-from wiki_extractor.client import WikiClient
+from wikibee.cli import _handle_search, _show_search_menu
+from wikibee.client import WikiClient
 
 
 class TestWikiClientSearch:
@@ -82,7 +82,7 @@ class TestWikiClientSearch:
 class TestSearchHandling:
     """Test CLI search handling logic."""
 
-    @patch("wiki_extractor.cli.WikiClient")
+    @patch("wikibee.cli.WikiClient")
     def test_handle_search_single_result(self, mock_client_class, capsys):
         """Test auto-selection when single result found."""
         mock_client = MagicMock()
@@ -104,7 +104,7 @@ class TestSearchHandling:
         captured = capsys.readouterr()
         assert "Found exact match" in captured.out
 
-    @patch("wiki_extractor.cli.WikiClient")
+    @patch("wikibee.cli.WikiClient")
     def test_handle_search_no_results(self, mock_client_class, capsys):
         """Test handling when no results found."""
         mock_client = MagicMock()
@@ -121,7 +121,7 @@ class TestSearchHandling:
         captured = capsys.readouterr()
         assert "No results found" in captured.out
 
-    @patch("wiki_extractor.cli.WikiClient")
+    @patch("wikibee.cli.WikiClient")
     def test_handle_search_yolo_multiple_results(self, mock_client_class, capsys):
         """Test --yolo flag auto-selects first result."""
         mock_client = MagicMock()
@@ -148,7 +148,7 @@ class TestSearchHandling:
         captured = capsys.readouterr()
         assert "Auto-selected" in captured.out
 
-    @patch("wiki_extractor.cli.WikiClient")
+    @patch("wikibee.cli.WikiClient")
     def test_handle_search_network_error(self, mock_client_class, capsys):
         """Test handling network errors gracefully."""
         mock_client = MagicMock()

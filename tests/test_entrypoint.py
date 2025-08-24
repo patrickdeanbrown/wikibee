@@ -7,7 +7,7 @@ def test_cli_runs(monkeypatch):
     def fake_extract(url, **kwargs):
         return ("Fake content.", "Fake Title")
 
-    import wiki_extractor.cli as cli
+    import wikibee.cli as cli
 
     monkeypatch.setattr(cli, "extract_wikipedia_text", fake_extract)
 
