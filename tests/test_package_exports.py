@@ -1,4 +1,4 @@
-from wiki_extractor import (
+from wikibee import (
     INFLECT_AVAILABLE,
     APIError,
     DisambiguationError,

@@ -1,8 +1,8 @@
-"""Public package API for wiki_extractor.
+"""Public package API for wikibee.
 
 This module re-exports the public functions and exceptions from
-`wiki_extractor.cli` so callers can import directly from
-``wiki_extractor`` (and the old top-level `extract` module remains
+`wikibee.cli` so callers can import directly from
+``wikibee`` (and the old top-level `extract` module remains
 backwards-compatible).
 """
 

@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a Python tool for extracting and processing Wikipedia articles into TTS-friendly formats. The project uses a modern Python packaging structure:
 
-- **`wiki_extractor/`**: Main package containing the core functionality
+- **`wikibee/`**: Main package containing the core functionality
   - `cli.py`: Main CLI logic and Wikipedia extraction functions
   - `client.py`: Wikipedia API client
   - `formatting.py`: Text processing and TTS formatting utilities
@@ -62,18 +62,18 @@ ruff check . --fix
 The tool can be used in multiple ways:
 
 1. **Direct script**: `python extract.py [url_or_search] [options]`
-2. **Module execution**: `python -m wiki_extractor [url_or_search] [options]`
-3. **Console script**: `wiki-extractor [url_or_search] [options]` (after `pip install -e .`)
-4. **Programmatic**: Import functions from `wiki_extractor` package
+2. **Module execution**: `python -m wikibee [url_or_search] [options]`
+3. **Console script**: `wikibee [url_or_search] [options]` (after `pip install -e .`)
+4. **Programmatic**: Import functions from `wikibee` package
 
 ### New Search Feature
 
 The tool now supports free-form search terms in addition to URLs:
 
-- **URL input**: `wiki-extractor "https://en.wikipedia.org/wiki/Wars_of_the_Roses"`
-- **Search input**: `wiki-extractor "war of the roses"`
-- **Fuzzy search**: `wiki-extractor "war fo the rose"` (handles typos)
-- **Auto-select**: `wiki-extractor "wars roses" --yolo` (picks first result)
+- **URL input**: `wikibee "https://en.wikipedia.org/wiki/Wars_of_the_Roses"`
+- **Search input**: `wikibee "war of the roses"`
+- **Fuzzy search**: `wikibee "war fo the rose"` (handles typos)
+- **Auto-select**: `wikibee "wars roses" --yolo` (picks first result)
 
 The search feature provides:
 - Interactive colored menu for multiple results
@@ -102,5 +102,5 @@ The code uses structured exceptions:
 - **Ruff**: Line length 88 characters (strictly enforced), linting rules in `pyproject.toml`
 - **Code style**: All lines must be ≤88 characters to pass linting
 - **Pytest**: Configuration in `setup.cfg`
-- **Console script**: `wiki-extractor` entry point defined in `pyproject.toml`
+- **Console script**: `wikibee` entry point defined in `pyproject.toml`
 - **TTS defaults**: Kokoro voice `af_sky+af_bella`, MP3 format, localhost:8880 server

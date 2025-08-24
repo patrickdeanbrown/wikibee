@@ -19,7 +19,9 @@ def _make_session() -> requests.Session:
     adapter = HTTPAdapter(max_retries=retries)
     s.mount("https://", adapter)
     s.mount("http://", adapter)
-    s.headers.update({"User-Agent": "wiki-extractor/1.0 (https://example.com/)"})
+    s.headers.update(
+        {"User-Agent": "wikibee/1.0 (https://github.com/patrickdeanbrown/wikibee)"}
+    )
     return s
 
 

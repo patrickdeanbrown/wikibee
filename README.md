@@ -1,6 +1,6 @@
-# wiki_extractor
+# wikibee
 
-[![CI](https://github.com/patrickdeanbrown/wiki_extractor/actions/workflows/python-tests.yml/badge.svg)](https://github.com/patrickdeanbrown/wiki_extractor/actions/workflows/python-tests.yml)
+[![CI](https://github.com/patrickdeanbrown/wikibee/actions/workflows/python-tests.yml/badge.svg)](https://github.com/patrickdeanbrown/wikibee/actions/workflows/python-tests.yml)
 
 Small utility to extract plain text from Wikipedia articles and produce a TTS-friendly plain text file.
 
@@ -11,12 +11,12 @@ Quickstart (PowerShell)
 
 ```powershell
 # install
-pip install wiki-extractor
+pip install wikibee
 # or
-pipx install wiki-extractor
+pipx install wikibee
 
 # extract an article and produce TTS file
-wiki-extractor "Homer" --tts --heading-prefix "Section:" -o output
+wikibee "Homer" --tts --heading-prefix "Section:" -o output
 ```
 
 ### One-step pipx install
@@ -29,7 +29,7 @@ make install
 ```
 
 This checks that `pipx` is present, installs the project and runs
-`wiki-extractor --help` to confirm everything is wired up.
+`wikibee --help` to confirm everything is wired up.
 
 Usage
 
@@ -39,13 +39,13 @@ Usage
 
 ```powershell
 # URL (traditional)
-wiki-extractor "https://en.wikipedia.org/wiki/Homer" --tts -o output
+wikibee "https://en.wikipedia.org/wiki/Homer" --tts -o output
 
 # Search term with fuzzy matching
-wiki-extractor "homer ancient greek poet" --tts -o output
+wikibee "homer ancient greek poet" --tts -o output
 
 # Auto-select first result (--yolo)
-wiki-extractor "homer poet" --yolo --tts -o output
+wikibee "homer poet" --yolo --tts -o output
 ```
 
 Notes
@@ -69,27 +69,33 @@ Run linters and tests (PowerShell)
 Package entrypoint
 ------------------
 
-After installation the `wiki-extractor` console script is available. You can also run the tool as a package module:
+After installation the `wikibee` console script is available. You can also run the tool as a package module:
 
 ```powershell
 # console script
-wiki-extractor "https://en.wikipedia.org/wiki/Homer" --tts -o output
+wikibee "https://en.wikipedia.org/wiki/Homer" --tts -o output
 
 # run via module
-python -m wiki_extractor "https://en.wikipedia.org/wiki/Homer" --tts -o output
+python -m wikibee "https://en.wikipedia.org/wiki/Homer" --tts -o output
 ```
 
 ### Standalone binaries
 
-Release builds include standalone executables for Windows, macOS and
-Linux created with PyInstaller. Download the file for your platform from
-the [releases page](https://github.com/patrickdeanbrown/wiki_extractor/releases),
-unzip it if needed, move `wiki-extractor` into a directory on your `PATH`
-(for example `/usr/local/bin`), make it executable if necessary
-(`chmod +x wiki-extractor` on Unix-like systems) and run it directly:
+Release builds include standalone executables for Windows and
+Linux created with PyInstaller. For macOS users, install via pipx:
 
 ```bash
-./wiki-extractor "Homer" --tts --heading-prefix "Section:" -o output
+pipx install wikibee
+```
+
+For Windows/Linux, download the binary for your platform from
+the [releases page](https://github.com/patrickdeanbrown/wikibee/releases),
+unzip it if needed, move `wikibee` into a directory on your `PATH`
+(for example `/usr/local/bin`), make it executable if necessary
+(`chmod +x wikibee` on Unix-like systems) and run it directly:
+
+```bash
+./wikibee "Homer" --tts --heading-prefix "Section:" -o output
 ```
 
 These binaries bundle Python so no interpreter or virtual environment is

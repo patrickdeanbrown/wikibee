@@ -2,7 +2,7 @@
 
 import pytest
 
-from wiki_extractor.tts_normalizer import TTSNormalizer, normalize_for_tts
+from wikibee.tts_normalizer import TTSNormalizer, normalize_for_tts
 
 
 class TestRomanNumeralsInNames:
