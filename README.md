@@ -84,8 +84,9 @@ python -m wiki_extractor "https://en.wikipedia.org/wiki/Homer" --tts -o output
 Release builds include standalone executables for Windows, macOS and
 Linux created with PyInstaller. Download the file for your platform from
 the [releases page](https://github.com/patrickdeanbrown/wiki_extractor/releases),
-make it executable if necessary (`chmod +x wiki-extractor` on
-Unix-like systems) and run it directly:
+unzip it if needed, move `wiki-extractor` into a directory on your `PATH`
+(for example `/usr/local/bin`), make it executable if necessary
+(`chmod +x wiki-extractor` on Unix-like systems) and run it directly:
 
 ```bash
 ./wiki-extractor "Homer" --tts --heading-prefix "Section:" -o output
