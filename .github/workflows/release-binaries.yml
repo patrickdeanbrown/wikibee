@@ -19,11 +19,8 @@ jobs:
             runner: ubuntu-latest
             arch: x86_64
           - os: macos
-            runner: macos-latest     # Apple Silicon (arm64)
+            runner: macos-latest     # Apple Silicon (arm64 only)
             arch: arm64
-          - os: macos
-            runner: macos-13         # Intel (x86_64)
-            arch: x86_64
           - os: windows
             runner: windows-latest
             arch: x86_64
@@ -31,7 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Pin to a PyInstaller-friendly Python; avoids sudden 3.13 breakage
+      # Pin Python to avoid fresh 3.13 packaging wrinkles with PyInstaller
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
@@ -42,19 +39,13 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install . pyinstaller
 
-      # Build: onedir for macOS (so we can sign every binary), onefile elsewhere
-      - name: Build (macOS onedir)
-        if: runner.os == 'macOS'
-        run: |
-          pyinstaller wiki_extractor/cli.py --name wiki-extractor --onedir
-
-      - name: Build (Linux/Windows onefile)
-        if: runner.os != 'macOS'
+      # Build: onefile everywhere (macOS will be signed with LV entitlement)
+      - name: Build (PyInstaller onefile)
         run: |
           pyinstaller wiki_extractor/cli.py --name wiki-extractor --onefile
 
-      # --- macOS: sign everything in the onedir, DMG -> notarize -> staple ---
-      - name: Sign & Notarize macOS DMG (onedir)
+      # ---------- macOS: sign single-file with LV entitlement, ZIP-notarize (no stapling) ----------
+      - name: Sign & Notarize macOS single-file (ZIP; no stapling)
         if: runner.os == 'macOS'
         env:
           MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}                 # base64-encoded .p12 (Developer ID Application + private key)
@@ -66,80 +57,69 @@ jobs:
         run: |
           set -euo pipefail
 
+          BIN="dist/wiki-extractor"                         # PyInstaller output
+          OUT_BASENAME="wiki-extractor-macos-${{ matrix.arch }}"
+          OUT_FILE="dist/${OUT_BASENAME}"
+          ZIP_FILE="dist/${OUT_BASENAME}.zip"
+
+          # Create entitlements (disable Library Validation for onefile runtime)
+          cat > entitlements.plist <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+            <dict>
+              <key>com.apple.security.cs.disable-library-validation</key>
+              <true/>
+            </dict>
+          </plist>
+          PLIST
+
           # Keychain setup (use real *.keychain-db path)
           echo "$MACOS_CERTIFICATE" | base64 --decode > certificate.p12
           KEYCHAIN_NAME="build.keychain-db"
           KEYCHAIN_PATH="$HOME/Library/Keychains/$KEYCHAIN_NAME"
 
           security create-keychain -p temp "$KEYCHAIN_NAME"
-          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"     # keep unlocked ~6h
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
           security unlock-keychain -p temp "$KEYCHAIN_PATH"
           security import certificate.p12 -k "$KEYCHAIN_PATH" -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -A
           security list-keychains -d user -s "$KEYCHAIN_PATH"
           security default-keychain -s "$KEYCHAIN_PATH"
           security set-key-partition-list -S apple-tool:,apple: -s -k temp "$KEYCHAIN_PATH"
 
-          # Resolve identity SHA (more reliable than display name)
+          # Resolve identity SHA (robust)
           security find-identity -v -p codesigning "$KEYCHAIN_PATH"
           ID_SHA=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | awk '/Developer ID Application/ {print $2; exit}')
           test -n "$ID_SHA"
 
-          APPDIR="dist/wiki-extractor"           # PyInstaller onedir output
-          MAINEXE="$APPDIR/wiki-extractor"
+          # Ensure executable bit and give it an arch-specific name
+          chmod +x "$BIN"
+          cp "$BIN" "$OUT_FILE"
 
-          # Sign inner binaries first (dylibs, .so/.pyd, embedded 'Python' files)
-          # Note: xargs -0 handles spaces safely; some dirs may not exist in all builds, so || true
-          find "$APPDIR" -type f \( -name "*.dylib" -o -name "*.so" -o -name "*.pyd" -o -name "Python" \) -print0 \
-            | xargs -0 -I{} codesign --force --timestamp --options runtime --keychain "$KEYCHAIN_PATH" --sign "$ID_SHA" "{}" || true
+          # Sign with Hardened Runtime + Disable Library Validation entitlement
+          codesign --force --timestamp --options runtime \
+            --entitlements entitlements.plist \
+            --keychain "$KEYCHAIN_PATH" --sign "$ID_SHA" "$OUT_FILE"
 
-          # Sign frameworks as bundles (after inner files)
-          find "$APPDIR" -type d -name "*.framework" -print0 \
-            | xargs -0 -I{} codesign --force --timestamp --options runtime --keychain "$KEYCHAIN_PATH" --sign "$ID_SHA" "{}" || true
+          # Diagnostics (non-fatal)
+          codesign -dv --verbose=4 "$OUT_FILE" || true
+          spctl --assess --type exec -vvv "$OUT_FILE" || true
 
-          # Sign the main executable last
-          codesign --force --timestamp --options runtime --keychain "$KEYCHAIN_PATH" --sign "$ID_SHA" "$MAINEXE"
+          # ZIP the single file for notarization (Apple scans the binary inside)
+          /usr/bin/zip -q -j "$ZIP_FILE" "$OUT_FILE"
 
-          # Local verification (don’t fail CI if Gatekeeper is picky)
-          codesign -dv --verbose=4 "$MAINEXE" || true
-          spctl --assess --type exec -vvv "$MAINEXE" || true
-
-          # Build DMG from the onedir tree (read-only DMG preserves signatures)
-          mkdir -p dist/dmgroot
-          cp -a "$APPDIR" dist/dmgroot/
-          cat > dist/dmgroot/README.txt <<'EOF'
-          WikiExtractor (CLI)
-          --------------------
-          Option A: Run directly from inside the folder:
-            ./wiki-extractor/wiki-extractor --help
-
-          Option B (recommended): copy the executable into your PATH:
-            sudo cp wiki-extractor/wiki-extractor /usr/local/bin/
-            wiki-extractor --help
-          EOF
-
-          DMG_PATH="dist/wiki-extractor-macos-${{ matrix.arch }}.dmg"
-          hdiutil create -volname "WikiExtractor" \
-            -srcfolder dist/dmgroot \
-            -ov -fs HFS+ -format UDZO "$DMG_PATH"
-
-          # Notarize + staple the DMG
-          xcrun notarytool submit "$DMG_PATH" \
+          # Notarize and wait for the result (no stapling for raw executables)
+          xcrun notarytool submit "$ZIP_FILE" \
             --apple-id "$APPLE_DEVELOPER_ID" \
             --password "$APPLE_APP_SPECIFIC_PASSWORD" \
             --team-id "$APPLE_TEAM_ID" \
             --wait
 
-          xcrun stapler staple "$DMG_PATH"
-          xcrun stapler validate "$DMG_PATH"
-          spctl --assess --type open -vvv "$DMG_PATH" || true
-
           # Cleanup secrets/materials
           security delete-keychain "$KEYCHAIN_PATH"
-          rm -f certificate.p12
-          rm -rf dist/dmgroot
+          rm -f certificate.p12 entitlements.plist
 
-      # --- Rename & upload artifacts per-OS ---
-
+      # ---------- Rename Linux/Windows artifacts ----------
       - name: Rename Linux artifact
         if: runner.os == 'Linux'
         run: mv dist/wiki-extractor dist/wiki-extractor-linux-x86_64
@@ -148,11 +128,12 @@ jobs:
         if: runner.os == 'Windows'
         run: mv dist/wiki-extractor.exe dist/wiki-extractor-windows-x86_64.exe
 
-      - name: Upload macOS DMG
+      # ---------- Upload per-OS artifacts ----------
+      - name: Upload macOS single-file
         if: runner.os == 'macOS'
         uses: softprops/action-gh-release@v1
         with:
-          files: dist/wiki-extractor-macos-${{ matrix.arch }}.dmg
+          files: dist/wiki-extractor-macos-${{ matrix.arch }}
 
       - name: Upload Linux artifact
         if: runner.os == 'Linux'
