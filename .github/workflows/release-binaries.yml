@@ -18,12 +18,15 @@ jobs:
           - os: ubuntu
             runner: ubuntu-latest
             arch: x86_64
+            target_arch: ""
           - os: macos
             runner: macos-latest     # Apple Silicon (arm64 only)
-            arch: arm64
+            arch: universal2
+            target_arch: "--target-arch universal2"
           - os: windows
             runner: windows-latest
             arch: x86_64
+            target_arch: ""
 
     steps:
       - uses: actions/checkout@v4
@@ -42,7 +45,7 @@ jobs:
       # Build: onefile everywhere (macOS will be signed with LV entitlement)
       - name: Build (PyInstaller onefile)
         run: |
-          pyinstaller -m wiki_extractor.cli --name wiki-extractor --onefile
+          pyinstaller -m wiki_extractor.cli --name wiki-extractor --onefile ${{ matrix.target_arch }}
 
       # ---------- macOS: sign single-file with LV entitlement, notarize, staple and zip ----------
       - name: Sign, Notarize, Staple & ZIP macOS single-file
@@ -127,11 +130,11 @@ jobs:
       # ---------- Rename Linux/Windows artifacts ----------
       - name: Rename Linux artifact
         if: runner.os == 'Linux'
-        run: mv dist/wiki-extractor dist/wiki-extractor-linux-x86_64
+        run: mv dist/wiki-extractor dist/wiki-extractor-linux-${{ matrix.arch }}
 
       - name: Rename Windows artifact
         if: runner.os == 'Windows'
-        run: mv dist/wiki-extractor.exe dist/wiki-extractor-windows-x86_64.exe
+        run: mv dist/wiki-extractor.exe dist/wiki-extractor-windows-${{ matrix.arch }}.exe
 
       # ---------- Upload per-OS artifacts ----------
       - name: Upload macOS zip
@@ -144,10 +147,10 @@ jobs:
         if: runner.os == 'Linux'
         uses: softprops/action-gh-release@v1
         with:
-          files: dist/wiki-extractor-linux-x86_64
+          files: dist/wiki-extractor-linux-${{ matrix.arch }}
 
       - name: Upload Windows artifact
         if: runner.os == 'Windows'
         uses: softprops/action-gh-release@v1
         with:
-          files: dist/wiki-extractor-windows-x86_64.exe
+          files: dist/wiki-extractor-windows-${{ matrix.arch }}.exe
