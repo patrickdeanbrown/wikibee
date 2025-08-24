@@ -14,65 +14,106 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
+
     steps:
       - uses: actions/checkout@v4
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.x"
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install . pyinstaller
+
       - name: Build binary
         run: pyinstaller wiki_extractor/cli.py --name wiki-extractor --onefile
 
-      # Steps for macOS signing and notarization
-      - name: Sign and Notarize macOS App
+      # macOS: sign CLI, build DMG, notarize DMG, staple DMG
+      - name: Sign & Notarize macOS DMG
         if: runner.os == 'macOS'
         env:
-          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}                 # base64-encoded .p12
           MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
-          APPLE_DEVELOPER_ID: ${{ secrets.APPLE_DEVELOPER_ID }}
+          APPLE_DEVELOPER_ID: ${{ secrets.APPLE_DEVELOPER_ID }}               # Apple ID email
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
-          # Import certificate from secrets
-          echo $MACOS_CERTIFICATE | base64 --decode > certificate.p12
-          security create-keychain -p "temp" build.keychain
-          security default-keychain -s build.keychain
-          security unlock-keychain -p "temp" build.keychain
-          security import certificate.p12 -k build.keychain -P $MACOS_CERTIFICATE_PASSWORD -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple: -s -k "temp" build.keychain
+          set -euxo pipefail
 
-          # Sign the binary
-          codesign --force -s "Developer ID Application" --keychain build.keychain --deep --options=runtime dist/wiki-extractor
+          # 0) Prepare keychain with Developer ID Application certificate
+          echo "$MACOS_CERTIFICATE" | base64 --decode > certificate.p12
+          security create-keychain -p temp build.keychain
+          security unlock-keychain -p temp build.keychain
+          security import certificate.p12 -k build.keychain -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k temp build.keychain
 
-          # Notarize the binary
-          # 1. Create a zip archive for the notarization service
-          ditto -c -k --sequesterRsrc --keepParent dist/wiki-extractor dist/wiki-extractor.zip
-          # 2. Submit for notarization
-          xcrun notarytool submit dist/wiki-extractor.zip --apple-id "$APPLE_DEVELOPER_ID" --password "$APPLE_APP_SPECIFIC_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait
-          
-          # 3. Add a delay to wait for the ticket to become available
-          echo "Waiting 60 seconds for notarization ticket to propagate..."
-          sleep 60
-          
-          # 4. Staple the notarization ticket to the original binary
-          xcrun stapler staple dist/wiki-extractor
-          
-      - name: Rename binary for release
+          # Resolve the exact identity string for safety
+          IDENTITY=$(security find-identity -v -p codesigning build.keychain | awk -F\" '/Developer ID Application/ {print $2; exit}')
+          echo "Using signing identity: $IDENTITY"
+
+          # 1) Sign the CLI binary (hardened runtime + timestamp)
+          codesign --force --options runtime --timestamp \
+            --keychain build.keychain --sign "$IDENTITY" dist/wiki-extractor
+
+          # Optional local Gatekeeper assessment of the binary itself
+          spctl --assess --type exec -vvv dist/wiki-extractor || true
+
+          # 2) Stage files into a DMG root
+          mkdir -p dist/dmgroot
+          cp dist/wiki-extractor dist/dmgroot/
+          cat > dist/dmgroot/README.txt <<'EOF'
+          WikiExtractor (CLI)
+          --------------------
+          1) Drag 'wiki-extractor' somewhere on your machine, e.g., /usr/local/bin
+             (you may need: sudo mv ~/Downloads/wiki-extractor /usr/local/bin/)
+          2) Make sure it's executable: chmod +x /usr/local/bin/wiki-extractor
+          3) Run from Terminal: wiki-extractor --help
+
+          This binary is signed; the DMG is notarized and stapled by Apple.
+          EOF
+
+          # 3) Create compressed DMG
+          hdiutil create -volname "WikiExtractor" \
+            -srcfolder dist/dmgroot \
+            -ov -fs HFS+ -format UDZO dist/wiki-extractor-macos.dmg
+
+          # 4) Notarize the DMG and wait for result
+          xcrun notarytool submit dist/wiki-extractor-macos.dmg \
+            --apple-id "$APPLE_DEVELOPER_ID" \
+            --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait
+
+          # 5) Staple the DMG and validate
+          xcrun stapler staple dist/wiki-extractor-macos.dmg
+          xcrun stapler validate dist/wiki-extractor-macos.dmg
+          spctl --assess --type open -vvv dist/wiki-extractor-macos.dmg || true
+
+          # Cleanup secrets
+          security delete-keychain build.keychain
+          rm -f certificate.p12
+          rm -rf dist/dmgroot
+
+      # Rename artifacts for release (Linux/Windows keep your original pattern; macOS is now a DMG)
+      - name: Rename artifact for release
         run: |
           if [ "${{ runner.os }}" == "Linux" ]; then
             mv dist/wiki-extractor dist/wiki-extractor-linux
           elif [ "${{ runner.os }}" == "macOS" ]; then
-            mv dist/wiki-extractor dist/wiki-extractor-macos
+            # Already named dist/wiki-extractor-macos.dmg above
+            :
           elif [ "${{ runner.os }}" == "Windows" ]; then
             mv dist/wiki-extractor.exe dist/wiki-extractor-windows.exe
           fi
         shell: bash
-        
-      - name: Upload release asset
+
+      - name: Upload release asset(s)
         uses: softprops/action-gh-release@v1
         with:
-          files: dist/wiki-extractor-*
+          files: |
+            dist/wiki-extractor-linux
+            dist/wiki-extractor-windows.exe
+            dist/wiki-extractor-macos.dmg
