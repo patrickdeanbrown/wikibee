@@ -1,0 +1,85 @@
+# Gemini Code Assist Configuration for Wikibee
+
+# Review settings
+review:
+  # Automatically review pull requests
+  auto_review: true
+  
+  # Severity threshold for blocking (info, low, medium, high, critical)
+  blocking_threshold: medium
+  
+  # Maximum number of comments per review
+  max_comments: 20
+  
+  # Focus areas for code review
+  focus:
+    - security
+    - performance
+    - maintainability
+    - testing
+    - documentation
+
+# File patterns to ignore during review
+ignore_patterns:
+  - ".venv/**"
+  - "**/__pycache__/**"
+  - "*.pyc"
+  - ".pytest_cache/**"
+  - "dist/**"
+  - "build/**"
+  - "*.egg-info/**"
+  - ".ruff_cache/**"
+  - "output/**"
+
+# Language-specific settings
+languages:
+  python:
+    # Use pyproject.toml settings for formatting
+    respect_local_config: true
+    
+    # Maximum line length (matches ruff configuration)
+    line_length: 88
+    
+    # Enforce type hints
+    require_type_hints: true
+    
+    # Check for security issues
+    security_checks: true
+
+# Testing configuration
+testing:
+  # Require tests for new functions
+  require_tests: true
+  
+  # Minimum coverage threshold
+  coverage_threshold: 80
+  
+  # Test frameworks
+  frameworks:
+    - pytest
+  
+  # Mock libraries
+  mocking:
+    - requests-mock
+
+# Documentation requirements
+documentation:
+  # Require docstrings for public functions
+  require_docstrings: true
+  
+  # Docstring style
+  style: google
+  
+  # Check for outdated documentation
+  check_outdated: true
+
+# Performance monitoring
+performance:
+  # Flag potentially slow operations
+  check_slow_operations: true
+  
+  # Monitor API call patterns
+  api_monitoring: true
+  
+  # Check for memory leaks in long-running operations
+  memory_monitoring: true
