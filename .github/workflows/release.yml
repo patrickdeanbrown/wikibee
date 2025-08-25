@@ -67,7 +67,7 @@ jobs:
           python -m pip install . pyinstaller
 
       - name: Build (PyInstaller onefile)
-        run: pyinstaller -m wikibee.cli --name wikibee --onefile
+        run: pyinstaller wikibee/__main__.py --name wikibee --onefile
 
       - name: Rename artifact
         run: |
