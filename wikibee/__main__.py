@@ -5,7 +5,7 @@ Delegates to the CLI app function for command-line execution.
 
 from __future__ import annotations
 
-from . import cli as _cli
+from wikibee import cli as _cli
 
 
 def _main() -> None:
