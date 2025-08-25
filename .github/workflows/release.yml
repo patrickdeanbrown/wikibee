@@ -67,6 +67,7 @@ jobs:
           python -m pip install . pyinstaller
 
       - name: Build (PyInstaller onefile)
+        # Use package entrypoint to maintain consistent imports
         run: pyinstaller wikibee/__main__.py --name wikibee --onefile
 
       - name: Rename artifact
