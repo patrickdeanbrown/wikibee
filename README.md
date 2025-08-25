@@ -1,102 +1,180 @@
 # wikibee
 
 [![CI](https://github.com/patrickdeanbrown/wikibee/actions/workflows/python-tests.yml/badge.svg)](https://github.com/patrickdeanbrown/wikibee/actions/workflows/python-tests.yml)
+[![PyPI version](https://badge.fury.io/py/wikibee.svg)](https://badge.fury.io/py/wikibee)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Small utility to extract plain text from Wikipedia articles and produce a TTS-friendly plain text file.
+Extract Wikipedia articles and convert them to TTS-friendly text and audio. Search by URL or keywords, get clean markdown and audio-optimized output.
 
-Requirements
-- Python 3.8-3.13
+## What is wikibee?
 
-Quickstart (PowerShell)
+wikibee transforms Wikipedia articles into clean, accessible content perfect for:
+- **Accessibility**: Convert text to speech for visually impaired users
+- **Podcast creation**: Research and content preparation
+- **Educational materials**: Clean text for study guides
+- **Offline reading**: Save articles in markdown format
+- **Audio content**: Generate TTS-ready text and audio files
 
-```powershell
-# install
+## Quick Start
+
+Install wikibee and create your first audio file in under 30 seconds:
+
+```bash
+# Install (recommended method)
+pipx install wikibee
+
+# Search and convert an article
+wikibee "Albert Einstein" --tts --output my-audio/
+
+# Or use a direct URL  
+wikibee "https://en.wikipedia.org/wiki/Artificial_intelligence" --tts
+```
+
+That's it! You now have clean markdown and TTS-optimized text files ready for audio conversion.
+
+## Installation
+
+### Option 1: pipx (Recommended)
+```bash
+pipx install wikibee
+```
+
+### Option 2: pip
+```bash
 pip install wikibee
-# or
-pipx install wikibee
-
-# extract an article and produce TTS file
-wikibee "Homer" --tts --heading-prefix "Section:" -o output
 ```
 
-### One-step pipx install
+### Option 3: Standalone Binaries
 
-The repository provides a small `Makefile` helper that installs the package
-with [pipx](https://pipx.pypa.io/) and verifies the command is available:
+**Windows/Linux**: Download from [releases](https://github.com/patrickdeanbrown/wikibee/releases)
+
+**macOS**: Use pipx installation (binaries not provided for macOS)
+
+### System Requirements
+- Python 3.8 or higher
+- Internet connection for Wikipedia access
+- Optional: TTS server for audio generation
+
+## Basic Usage
+
+### Search by Keywords
+```bash
+# Simple search with fuzzy matching
+wikibee "war of the roses"
+
+# Auto-select first result (no interactive menu)
+wikibee "napoleon bonaparte" --yolo
+
+# Save to specific directory
+wikibee "quantum computing" --output research/
+```
+
+### Use Direct URLs
+```bash
+# Process specific Wikipedia page
+wikibee "https://en.wikipedia.org/wiki/Machine_learning"
+
+# Get only the introduction section
+wikibee "https://en.wikipedia.org/wiki/Python" --lead-only
+```
+
+### Generate Audio-Ready Content
+```bash
+# Create TTS-optimized text
+wikibee "Ancient Rome" --tts
+
+# Customize heading format for TTS
+wikibee "World War II" --tts --heading-prefix "Section:"
+
+# Specify output filename
+wikibee "Mozart" --tts --output music/ --filename mozart_biography
+```
+
+## Common Use Cases
+
+### For Accessibility
+```bash
+# Create clean, readable text files
+wikibee "Marie Curie" --tts --output biographies/
+# Output: marie_curie.md and marie_curie.txt (TTS-ready)
+```
+
+### For Podcast Research
+```bash
+# Quick research with minimal processing
+wikibee "blockchain technology" --lead-only --output research/
+```
+
+### For Educational Content
+```bash
+# Batch process multiple topics
+wikibee "photosynthesis" --tts --output biology/
+wikibee "mitosis" --tts --output biology/
+wikibee "evolution" --tts --output biology/
+```
+
+## Key Features
+
+- **Smart Search**: Fuzzy matching handles typos and partial queries
+- **Interactive Selection**: Choose from multiple search results with a numbered menu
+- **Clean Output**: Removes Wikipedia markup, leaving clean markdown
+- **TTS Optimization**: Strips formatting markers that confuse text-to-speech engines
+- **Flexible Output**: Save to custom directories with custom filenames
+- **Error Handling**: Graceful handling of network issues and missing pages
+- **Cross-Platform**: Works on Windows, macOS, and Linux
+
+## Documentation
+
+- **[Quick Start Guide](docs/quickstart.md)** - Get up and running in 5 minutes
+- **[Complete Tutorial](docs/tutorial/)** - Comprehensive usage guide
+- **[CLI Reference](docs/reference/cli-reference.md)** - All commands and options
+- **[API Reference](docs/reference/api-reference.md)** - Python API documentation
+- **[Troubleshooting](docs/reference/troubleshooting.md)** - Common issues and solutions
+
+## Development
+
+wikibee is built with modern Python practices:
 
 ```bash
-make install
+# Set up development environment
+uv venv --python 3.12
+source .venv/bin/activate
+uv pip install -e ".[dev]"
+
+# Run tests
+pytest -q
+
+# Check code style
+ruff check .
 ```
 
-This checks that `pipx` is present, installs the project and runs
-`wikibee --help` to confirm everything is wired up.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed development guidelines.
 
-Usage
+## Examples and Scripts
 
-- CLI flags: `article` (positional), `--yolo/-y`, `--output/-o`, `--filename/-f`, `--no-save/-n`, `--timeout/-t`, `--lead-only/-l`, `--tts`, `--heading-prefix`, `--verbose/-v`.
+The `scripts/` directory contains working examples:
+- `smoke_extract.py` - Basic extraction example
+- See `docs/guides/examples.md` for more real-world scenarios
 
-**New Search Feature**: The tool now accepts both Wikipedia URLs and free-form search terms:
+## Getting Help
 
-```powershell
-# URL (traditional)
-wikibee "https://en.wikipedia.org/wiki/Homer" --tts -o output
+- **Documentation**: Check the `docs/` directory for comprehensive guides
+- **Issues**: [Report bugs or request features](https://github.com/patrickdeanbrown/wikibee/issues)
+- **Discussions**: Ask questions in GitHub discussions
 
-# Search term with fuzzy matching
-wikibee "homer ancient greek poet" --tts -o output
+## License
 
-# Auto-select first result (--yolo)
-wikibee "homer poet" --yolo --tts -o output
-```
+MIT License - see [LICENSE](LICENSE) for details.
 
-Notes
-- The TTS file strips Markdown markers (including `#`) so TTS engines like Kokoro won't say "number" for headings.
-- Optional number-to-word conversion requires the `inflect` package.
-- Rich-powered console messages provide clearer, colorized CLI output.
+## Contributing
 
-Development
-- Tests are under `tests/`. Run `pytest` in the project root inside the venv.
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on:
+- Setting up your development environment
+- Code style and testing requirements
+- Submitting pull requests
+- Reporting bugs and requesting features
 
-Run linters and tests (PowerShell)
+---
 
-```powershell
-# run pre-commit hooks
-.venv\Scripts\pre-commit run --all-files
-
-# run tests
-.venv\Scripts\pytest -q
-```
-
-Package entrypoint
-------------------
-
-After installation the `wikibee` console script is available. You can also run the tool as a package module:
-
-```powershell
-# console script
-wikibee "https://en.wikipedia.org/wiki/Homer" --tts -o output
-
-# run via module
-python -m wikibee "https://en.wikipedia.org/wiki/Homer" --tts -o output
-```
-
-### Standalone binaries
-
-Release builds include standalone executables for Windows and
-Linux created with PyInstaller. For macOS users, install via pipx:
-
-```bash
-pipx install wikibee
-```
-
-For Windows/Linux, download the binary for your platform from
-the [releases page](https://github.com/patrickdeanbrown/wikibee/releases),
-unzip it if needed, move `wikibee` into a directory on your `PATH`
-(for example `/usr/local/bin`), make it executable if necessary
-(`chmod +x wikibee` on Unix-like systems) and run it directly:
-
-```bash
-./wikibee "Homer" --tts --heading-prefix "Section:" -o output
-```
-
-These binaries bundle Python so no interpreter or virtual environment is
-required.
+**Made with care for the Wikipedia community and accessibility advocates everywhere.**
