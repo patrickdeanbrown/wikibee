@@ -8,8 +8,9 @@ This is a Python tool for extracting and processing Wikipedia articles into TTS-
 
 - **`wikibee/`**: Main package containing the core functionality
   - `cli.py`: Main CLI logic and Wikipedia extraction functions
-  - `client.py`: Wikipedia API client
+  - `client.py`: Wikipedia API client with retry logic and session management
   - `formatting.py`: Text processing and TTS formatting utilities
+  - `tts_normalizer.py`: Advanced TTS text normalization (royal names, centuries, Latin abbreviations)
   - `tts_openai.py`: OpenAI-compatible TTS client for audio synthesis
 - **`extract.py`**: Backward-compatible shim for legacy imports
 - **`tests/`**: Comprehensive test suite
@@ -50,11 +51,18 @@ pytest -v
 # Run specific test file
 pytest tests/test_extract.py
 
+# Run smoke test
+python scripts/smoke_extract.py
+
 # Run linter
 ruff check .
 
 # Run linter with fixes
 ruff check . --fix
+
+# Install and run pre-commit hooks
+pre-commit install
+pre-commit run --all-files
 ```
 
 ## Usage Patterns
@@ -90,12 +98,23 @@ Key CLI options: `article` (positional), `--yolo/-y`, `--output/-o`, `--tts`, `-
 
 ## Error Handling
 
-The code uses structured exceptions:
-- `NetworkError`: Request/network failures
-- `APIError`: Invalid API responses
-- `NotFoundError`: Missing pages/extracts
-- `DisambiguationError`: Disambiguation pages
-- `TTSClientError`: TTS synthesis failures
+The code uses structured exceptions defined in `cli.py` and `tts_openai.py`:
+- `NetworkError`: Request/network failures, timeouts, connection issues
+- `APIError`: Invalid API responses from Wikipedia
+- `NotFoundError`: Missing pages/extracts (404 responses)
+- `DisambiguationError`: Disambiguation pages requiring user selection
+- `TTSClientError`: TTS synthesis failures, server unavailable
+
+### Exception Handling Patterns
+```python
+try:
+    result = client.search_articles(search_term, timeout=args.timeout)
+except requests.exceptions.RequestException as e:
+    console.print(f"[red]Search failed: {e}[/]")
+    return None
+```
+
+All exceptions inherit from `RuntimeError` and provide meaningful error messages for CLI output.
 
 ## Configuration
 
@@ -104,3 +123,60 @@ The code uses structured exceptions:
 - **Pytest**: Configuration in `setup.cfg`
 - **Console script**: `wikibee` entry point defined in `pyproject.toml`
 - **TTS defaults**: Kokoro voice `af_sky+af_bella`, MP3 format, localhost:8880 server
+
+## API Integration Patterns
+
+### Wikipedia Client Usage
+The `WikiClient` class provides robust Wikipedia API interaction:
+```python
+client = WikiClient()
+# Search with retry logic and proper error handling
+results = client.search_articles(search_term, limit=10, timeout=30)
+# Extract article text with disambiguation handling
+text = client.extract_article_text(article_url, timeout=30)
+```
+
+### TTS Integration
+```python
+# Text normalization for better TTS pronunciation
+normalized_text = normalize_for_tts(raw_text)
+# TTS client for audio synthesis
+tts_client = TTSOpenAIClient(base_url="http://localhost:8880/v1", voice="af_sky+af_bella")
+```
+
+## Testing Strategy
+
+### Test Categories
+- **Unit tests**: Individual function testing (`test_extract.py`, `test_tts_normalizer.py`)
+- **Integration tests**: API interaction testing (`test_search.py`, `test_tts_openai.py`)  
+- **Package tests**: Import and entrypoint verification (`test_package_exports.py`, `test_entrypoint.py`)
+- **Smoke tests**: End-to-end validation (`scripts/smoke_extract.py`)
+
+### Mock Usage
+Tests use `requests-mock` for Wikipedia API mocking:
+```python
+import requests_mock
+@requests_mock.Mocker()
+def test_search_articles(m):
+    m.get(url, json=mock_response)
+    # Test implementation
+```
+
+## Console Output Formatting
+
+Uses Rich library for colored, structured CLI output:
+- **Colors**: `[red]` errors, `[yellow]` warnings, `[green]` success, `[cyan]` info
+- **Progress**: Search results numbered (1-10), clear selection prompts
+- **Error display**: Structured error messages with troubleshooting hints
+
+## Troubleshooting
+
+### Common Issues
+- **Import errors**: Ensure `pip install -e .[dev]` was run in activated virtual environment
+- **Search failures**: Check internet connection; Wikipedia API may be temporarily unavailable
+- **TTS errors**: Verify TTS server running on localhost:8880 (if using --audio flag)
+- **File permission errors**: Check output directory write permissions
+
+### Development Environment Issues
+- **Pre-commit hook failures**: Run `pre-commit run --all-files` to fix formatting issues
+- **Test failures**: Use `pytest -v` for detailed output; check mock setup for API tests
