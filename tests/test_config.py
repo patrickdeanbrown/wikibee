@@ -12,19 +12,21 @@ def test_get_config_path():
         expected_path = Path("/fake/config/dir/wikibee") / "config.toml"
         assert config.get_config_path() == expected_path
 
+
 def test_load_config_no_file():
     """Test that loading a non-existent file returns an empty dict."""
     with patch("pathlib.Path.exists", return_value=False):
         result = config.load_config()
         assert result == {}
 
+
 def test_load_config_with_file(tmp_path):
     """Test that a TOML config file is loaded correctly."""
     config_path = tmp_path / "config.toml"
-    config_content = '''
+    config_content = """
     tts_voice = "test_voice"
     timeout = 30
-    '''
+    """
     config_path.write_text(config_content)
 
     expected_config = {
@@ -35,6 +37,7 @@ def test_load_config_with_file(tmp_path):
     with patch("wikibee.config.get_config_path", return_value=config_path):
         loaded_config = config.load_config()
         assert loaded_config == expected_config
+
 
 def test_merge_configs():
     """Test that configurations are merged correctly."""

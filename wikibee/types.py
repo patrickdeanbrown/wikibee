@@ -33,4 +33,3 @@ class ExtractsResponse(TypedDict, total=False):
     """Top-level structure for the extracts API response."""
 
     query: QueryResult
-

@@ -27,4 +27,3 @@ How did you test this? Include commands/output or screenshots as appropriate.
 ## Follow-ups
 
 Any follow-up work, tracking issues, or deferred items.
-

@@ -1,13 +1,14 @@
 # Configuration management for wikibee
 import sys
 from pathlib import Path
+from typing import Any, Dict
+
+import platformdirs
 
 if sys.version_info >= (3, 11):
     import tomllib
 else:
     import tomli as tomllib
-
-import platformdirs
 
 
 def get_config_path() -> Path:
@@ -18,9 +19,6 @@ def get_config_path() -> Path:
         Path: The path to the configuration file.
     """
     return Path(platformdirs.user_config_path("wikibee")) / "config.toml"
-
-
-from typing import Dict, Any
 
 
 def load_config() -> Dict[str, Any]:
@@ -35,6 +33,7 @@ def load_config() -> Dict[str, Any]:
         return {}
     with open(config_path, "rb") as f:
         return tomllib.load(f)
+
 
 def merge_configs(
     defaults: Dict[str, Any],
