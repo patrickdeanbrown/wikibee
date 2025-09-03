@@ -7,7 +7,7 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from .types import ExtractsResponse, SearchResult
+from ._types import ExtractsResponse, SearchResult
 
 
 def _make_session() -> requests.Session:

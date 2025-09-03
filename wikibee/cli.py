@@ -14,10 +14,10 @@ from typer.core import TyperGroup
 
 from . import config  # re-exported for tests to monkeypatch
 from . import formatting as _formatting
+from ._types import ExtractsResponse, PageObject, SearchResult
 from .client import WikiClient
 from .tts_normalizer import normalize_for_tts as tts_normalize_for_tts
 from .tts_openai import TTSClientError, TTSOpenAIClient
-from .types import ExtractsResponse, PageObject, SearchResult
 
 # Re-export frequently used formatting helpers for backward compatibility.
 # Import the module and assign names so linters don't report unused imports.

@@ -102,7 +102,7 @@ disallow_untyped_defs = true
 warn_return_any = true
 
 [[tool.mypy.overrides]]
-module = ["wikibee.types", "wikibee.tts_openai", "wikibee.tts_normalizer"]
+module = ["wikibee._types", "wikibee.tts_openai", "wikibee.tts_normalizer"]
 disallow_untyped_defs = true
 warn_return_any = true
 
