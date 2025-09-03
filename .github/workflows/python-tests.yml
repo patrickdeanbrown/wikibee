@@ -28,6 +28,9 @@ jobs:
       - name: Run pre-commit
         run: |
           pre-commit run --show-diff-on-failure --color=always --all-files
+      - name: Install type stubs for mypy
+        run: |
+          pip install types-requests types-urllib3
       - name: Run mypy (static type check)
         run: |
           mypy wikibee
