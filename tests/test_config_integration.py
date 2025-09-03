@@ -1,7 +1,11 @@
 from unittest.mock import MagicMock
 
-import tomli
 from typer.testing import CliRunner
+
+try:  # Python 3.11+
+    import tomllib as tomli  # type: ignore[attr-defined]
+except Exception:  # Python < 3.11
+    import tomli  # type: ignore[no-redef]
 
 from wikibee import cli
 
