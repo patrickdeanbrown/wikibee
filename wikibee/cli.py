@@ -239,9 +239,7 @@ def _build_args_from_merged(article: str, merged: Dict[str, object]) -> Args:
         tts_format=_coerce_str(merged.get("tts_format"), DEFAULT_TTS_FORMAT),
         yolo=_coerce_bool(merged.get("yolo"), DEFAULT_YOLO),
         search_limit=_coerce_int(merged.get("search_limit"), DEFAULT_SEARCH_LIMIT),
-        tts_normalize=_coerce_bool(
-            merged.get("tts_normalize"), DEFAULT_TTS_NORMALIZE
-        ),
+        tts_normalize=_coerce_bool(merged.get("tts_normalize"), DEFAULT_TTS_NORMALIZE),
     )
 
 

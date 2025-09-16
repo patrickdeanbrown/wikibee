@@ -111,6 +111,9 @@ pre-commit install
 # Run hooks manually
 pre-commit run --all-files
 
+# Or mirror the CI hook stack with uv (preferred before pushing)
+scripts/run_precommit_checks.sh
+
 # Skip hooks for emergency commits (not recommended)
 git commit --no-verify -m "Emergency fix"
 ```
