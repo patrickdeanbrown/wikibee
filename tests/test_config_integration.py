@@ -22,10 +22,13 @@ def test_config_precedence(monkeypatch, tmp_path):
 [general]
 default_timeout = 20
 verbose = true
+no_save = true
 
 [tts]
 default_voice = "config-voice"
 normalize = true
+file = true
+audio = true
 
 [search]
 auto_select = true
@@ -88,6 +91,11 @@ search_limit = 6
     assert final_args.yolo is True
     assert final_args.tts_normalize is True
 
+    # Config should enable TTS outputs and no-save mode
+    assert final_args.tts_file is True
+    assert final_args.tts_audio is True
+    assert final_args.no_save is True
+
 
 def test_config_init(monkeypatch, tmp_path):
     """
@@ -118,6 +126,7 @@ def test_config_init(monkeypatch, tmp_path):
             "output_dir": str(Path.home() / "wikibee"),
             "default_timeout": int(cli.DEFAULTS["timeout"]),
             "lead_only": bool(cli.DEFAULTS["lead_only"]),
+            "no_save": bool(cli.DEFAULTS["no_save"]),
             "verbose": bool(cli.DEFAULTS["verbose"]),
         },
         "tts": {
@@ -125,6 +134,8 @@ def test_config_init(monkeypatch, tmp_path):
             "default_voice": str(cli.DEFAULTS["tts_voice"]),
             "format": str(cli.DEFAULTS["tts_format"]),
             "normalize": bool(cli.DEFAULTS["tts_normalize"]),
+            "file": bool(cli.DEFAULTS["tts_file"]),
+            "audio": bool(cli.DEFAULTS["tts_audio"]),
         },
         "search": {
             "auto_select": bool(cli.DEFAULTS["yolo"]),

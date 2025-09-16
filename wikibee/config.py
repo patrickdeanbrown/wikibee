@@ -36,6 +36,8 @@ def _normalize_config_data(data: Dict[str, Any]) -> Dict[str, Any]:
             "timeout": "timeout",
             "verbose": "verbose",
             "lead_only": "lead_only",
+            "no_save": "no_save",
+            "filename": "filename",
         },
         "tts": {
             "server_url": "tts_server",
@@ -45,6 +47,8 @@ def _normalize_config_data(data: Dict[str, Any]) -> Dict[str, Any]:
             "format": "tts_format",
             "heading_prefix": "heading_prefix",
             "normalize": "tts_normalize",
+            "file": "tts_file",
+            "audio": "tts_audio",
         },
         "search": {
             "auto_select": "yolo",

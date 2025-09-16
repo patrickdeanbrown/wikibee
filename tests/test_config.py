@@ -28,6 +28,8 @@ def test_load_config_with_file(tmp_path):
     default_timeout = 30
     output_dir = "/tmp/wikibee"
     verbose = true
+    no_save = true
+    filename = "article.md"
 
     [tts]
     default_voice = "test_voice"
@@ -35,6 +37,8 @@ def test_load_config_with_file(tmp_path):
     format = "wav"
     normalize = true
     heading_prefix = "Section:"
+    file = true
+    audio = true
 
     [search]
     auto_select = true
@@ -46,11 +50,15 @@ def test_load_config_with_file(tmp_path):
         "timeout": 30,
         "output_dir": "/tmp/wikibee",
         "verbose": True,
+        "no_save": True,
+        "filename": "article.md",
         "tts_voice": "test_voice",
         "tts_server": "http://localhost:9000",
         "tts_format": "wav",
         "tts_normalize": True,
         "heading_prefix": "Section:",
+        "tts_file": True,
+        "tts_audio": True,
         "yolo": True,
         "search_limit": 5,
     }

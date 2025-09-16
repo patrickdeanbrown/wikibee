@@ -37,13 +37,9 @@ logger = logging.getLogger(__name__)
 
 
 class _DefaultGroup(TyperGroup):
-    """Click Group that treats non-command first argument as default command.
+    """Click Group that treats non-command first argument as default command."""
 
-    This lets `wikibee <article> [options]` work alongside subcommands
-    like `wikibee config init`.
-    """
-
-    default_command_name = "main"
+    default_command_name = "extract"
 
     def resolve_command(
         self, ctx: click.Context, args: List[str]
@@ -53,12 +49,11 @@ class _DefaultGroup(TyperGroup):
             and args[0] not in self.commands
             and self.default_command_name in self.commands
         ):
-            # Prepend the default command name so click routes properly
             args = [self.default_command_name] + args
         return super().resolve_command(ctx, args)
 
 
-app = typer.Typer(cls=_DefaultGroup)
+app = typer.Typer(cls=_DefaultGroup, no_args_is_help=True)
 console = Console()
 
 DEFAULT_OUTPUT_DIR = os.path.join(os.getcwd(), "output")
@@ -72,8 +67,12 @@ DEFAULTS: Dict[str, object] = {
     "tts_format": "mp3",
     "tts_server": "http://localhost:8880/v1",
     "output_dir": DEFAULT_OUTPUT_DIR,
+    "filename": None,
+    "no_save": False,
     "verbose": False,
     "heading_prefix": None,
+    "tts_file": False,
+    "tts_audio": False,
     "yolo": False,
     "search_limit": DEFAULT_SEARCH_LIMIT,
     "tts_normalize": False,
@@ -140,39 +139,32 @@ def _handle_search(search_term: str, args: Args) -> Optional[str]:
 
 
 def _collect_cli_overrides(
-    ctx: click.Context, raw_cli_values: Dict[str, object]
+    ctx: click.Context, raw_cli_values: Dict[str, Tuple[str, object]]
 ) -> Dict[str, object]:
     """Return CLI values that should override config values."""
 
     overrides: Dict[str, object] = {}
     if ParameterSource is not None:
         override_sources = {ParameterSource.COMMANDLINE, ParameterSource.ENVIRONMENT}
-        for key, value in raw_cli_values.items():
+        for param_name, (config_key, value) in raw_cli_values.items():
             if value is None:
                 continue
-            if ctx.get_parameter_source(key) in override_sources:
-                overrides[key] = value
+            if ctx.get_parameter_source(param_name) in override_sources:
+                overrides[config_key] = value
         return overrides
 
-    for key, value in raw_cli_values.items():  # pragma: no cover - Click < 8 fallback
+    # pragma: no cover - Click < 8 fallback
+    for param_name, (config_key, value) in raw_cli_values.items():
         if value is None:
             continue
-        default_value = DEFAULTS.get(key)
+        default_value = DEFAULTS.get(config_key)
         if default_value is not None and value == default_value:
             continue
-        overrides[key] = value
+        overrides[config_key] = value
     return overrides
 
 
-def _build_args_from_merged(
-    *,
-    article: str,
-    filename: Optional[str],
-    no_save: bool,
-    tts: bool,
-    audio: bool,
-    merged: Dict[str, object],
-) -> Args:
+def _build_args_from_merged(article: str, merged: Dict[str, object]) -> Args:
     """Construct the runtime Args from merged configuration values."""
 
     output_dir_value = os.path.expanduser(
@@ -181,14 +173,14 @@ def _build_args_from_merged(
     return Args(
         article=article,
         output_dir=output_dir_value,
-        filename=filename,
-        no_save=no_save,
+        filename=cast(Optional[str], merged.get("filename")),
+        no_save=bool(merged.get("no_save", DEFAULTS["no_save"])),
         timeout=int(merged.get("timeout", DEFAULTS["timeout"])),
         lead_only=bool(merged.get("lead_only", DEFAULTS["lead_only"])),
-        tts_file=tts,
+        tts_file=bool(merged.get("tts_file", DEFAULTS["tts_file"])),
         heading_prefix=cast(Optional[str], merged.get("heading_prefix")),
         verbose=bool(merged.get("verbose", DEFAULTS["verbose"])),
-        tts_audio=audio,
+        tts_audio=bool(merged.get("tts_audio", DEFAULTS["tts_audio"])),
         tts_server=cast(str, merged.get("tts_server", DEFAULTS["tts_server"])),
         tts_voice=cast(Optional[str], merged.get("tts_voice", DEFAULTS["tts_voice"])),
         tts_format=cast(str, merged.get("tts_format", DEFAULTS["tts_format"])),
@@ -340,8 +332,8 @@ def extract_wikipedia_text(
     return _process_page(page_obj, convert_numbers_for_tts, raise_on_error)
 
 
-@app.command()
-def main(
+@app.command(name="extract", help="Extract a Wikipedia article to Markdown/TTS")
+def extract(
     article: str = typer.Argument(..., help="Wikipedia article URL or search term"),
     output_dir: str = typer.Option(
         DEFAULT_OUTPUT_DIR,
@@ -435,31 +427,28 @@ def main(
 ) -> None:
     ctx = click.get_current_context()
 
-    raw_cli_values: Dict[str, object] = {
-        "timeout": timeout,
-        "lead_only": lead_only,
-        "tts_voice": tts_voice,
-        "tts_format": tts_format,
-        "tts_server": tts_server,
-        "output_dir": output_dir,
-        "heading_prefix": heading_prefix,
-        "verbose": verbose,
-        "yolo": yolo,
-        "search_limit": search_limit,
-        "tts_normalize": tts_normalize,
+    raw_cli_values: Dict[str, Tuple[str, object]] = {
+        "timeout": ("timeout", timeout),
+        "lead_only": ("lead_only", lead_only),
+        "tts_voice": ("tts_voice", tts_voice),
+        "tts_format": ("tts_format", tts_format),
+        "tts_server": ("tts_server", tts_server),
+        "output_dir": ("output_dir", output_dir),
+        "filename": ("filename", filename),
+        "no_save": ("no_save", no_save),
+        "heading_prefix": ("heading_prefix", heading_prefix),
+        "verbose": ("verbose", verbose),
+        "tts": ("tts_file", tts),
+        "audio": ("tts_audio", audio),
+        "yolo": ("yolo", yolo),
+        "search_limit": ("search_limit", search_limit),
+        "tts_normalize": ("tts_normalize", tts_normalize),
     }
 
     cli_overrides = _collect_cli_overrides(ctx, raw_cli_values)
     cfg = config.load_config()
     merged = config.merge_configs(DEFAULTS, cfg, cli_overrides)
-    args = _build_args_from_merged(
-        article=article,
-        filename=filename,
-        no_save=no_save,
-        tts=tts,
-        audio=audio,
-        merged=merged,
-    )
+    args = _build_args_from_merged(article, merged)
 
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
@@ -509,6 +498,9 @@ def main(
         _write_outputs(args, markdown_content, md_path, out_dir, page_title)
     except IOError as e:
         logger.error("Failed to write output: %s", e)
+
+
+app.command(name="main", hidden=True)(extract)
 
 
 def _produce_audio(
@@ -636,6 +628,7 @@ def config_init(
             "output_dir": str(Path.home() / "wikibee"),
             "default_timeout": int(DEFAULTS["timeout"]),
             "lead_only": bool(DEFAULTS["lead_only"]),
+            "no_save": bool(DEFAULTS["no_save"]),
             "verbose": bool(DEFAULTS["verbose"]),
         },
         "tts": {
@@ -643,6 +636,8 @@ def config_init(
             "default_voice": cast(str, DEFAULTS["tts_voice"]),
             "format": cast(str, DEFAULTS["tts_format"]),
             "normalize": bool(DEFAULTS["tts_normalize"]),
+            "file": bool(DEFAULTS["tts_file"]),
+            "audio": bool(DEFAULTS["tts_audio"]),
         },
         "search": {
             "auto_select": bool(DEFAULTS["yolo"]),

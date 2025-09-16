@@ -20,6 +20,7 @@ example below highlights the available sections and keys.
 output_dir = "/home/user/wikipedia"
 default_timeout = 30
 lead_only = false
+no_save = false
 verbose = false
 
 [tts]
@@ -27,6 +28,8 @@ server_url = "http://localhost:8880/v1"
 default_voice = "af_sky+af_bella"
 format = "mp3"
 normalize = false
+file = true
+audio = false
 heading_prefix = "Section:"
 
 [search]
@@ -43,7 +46,9 @@ search_limit = 10
 - `default_timeout`: Timeout (seconds) for Wikipedia API calls when no CLI
   value is provided.
 - `lead_only`: Whether to fetch only the article introduction by default.
+- `no_save`: Skip writing files and emit the markdown to stdout.
 - `verbose`: Enables debug logging without requiring `--verbose` each run.
+- `filename`: Optional base filename (without extension) for saved output.
 
 ### `[tts]`
 
@@ -51,6 +56,8 @@ search_limit = 10
 - `default_voice`: Voice identifier passed to the TTS service.
 - `format`: Audio format for synthesized files (for example `mp3` or `wav`).
 - `normalize`: Toggle the extra text normalization step used for TTS output.
+- `file`: Enable creation of the TTS-friendly `.txt` companion file.
+- `audio`: Enable audio synthesis using the configured TTS server.
 - `heading_prefix`: Optional prefix prepended to headings in TTS text files.
 
 ### `[search]`
