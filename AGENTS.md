@@ -84,6 +84,9 @@ ruff check wikibee/cli.py tests/
 
 # Pre-commit hooks (runs ruff, isort, black)
 pre-commit run --all-files
+
+# CI-equivalent hook runner (uses uv and matches GitHub Actions)
+scripts/run_precommit_checks.sh
 ```
 
 ### Code Style Requirements
@@ -110,7 +113,7 @@ test: add coverage for error handling
 ### Pre-merge Checklist
 - [ ] All tests pass: `pytest -q`
 - [ ] Linting passes: `ruff check .`
-- [ ] Pre-commit hooks pass: `pre-commit run --all-files`  
+- [ ] Pre-commit hooks pass: `pre-commit run --all-files` *(or run `scripts/run_precommit_checks.sh`)*  
 - [ ] Smoke test passes: `python scripts/smoke_extract.py`
 - [ ] Type hints added for new functions
 - [ ] Docstrings added for public functions

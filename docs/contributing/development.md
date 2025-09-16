@@ -111,6 +111,9 @@ pre-commit install
 # Run hooks manually
 pre-commit run --all-files
 
+# Or mirror the CI hook stack with uv (preferred before pushing)
+scripts/run_precommit_checks.sh
+
 # Skip hooks for emergency commits (not recommended)
 git commit --no-verify -m "Emergency fix"
 ```
@@ -210,7 +213,7 @@ ruff check wikibee/cli.py
 
 ### Type Checking
 
-While not enforced, type hints are required:
+Type hints are required and enforced via `mypy` in CI:
 
 ```python
 # Good: Type hints included
@@ -218,9 +221,15 @@ def extract_text(url: str, timeout: int = 15) -> tuple[str | None, str | None]:
     """Extract text from Wikipedia URL."""
     pass
 
-# Bad: No type hints
+```bash
+mypy wikibee
+```
+
+Bad: No type hints
+```python
 def extract_text(url, timeout=15):
-    pass
+    ...
+```
 ```
 
 ### Documentation

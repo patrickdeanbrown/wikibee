@@ -302,11 +302,17 @@ wikibee looks for configuration in `~/.config/wikibee/config.toml`:
 [general]
 output_dir = "/home/user/wikipedia"
 default_timeout = 30
+lead_only = false
+no_save = false
 verbose = false
 
 [tts]
-server_url = "http://localhost:8880"
+server_url = "http://localhost:8880/v1"
 default_voice = "af_sky+af_bella"
+format = "mp3"
+normalize = true
+file = true
+audio = false
 heading_prefix = "Section:"
 
 [search]  
