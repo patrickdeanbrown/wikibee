@@ -24,19 +24,52 @@ def test_load_config_with_file(tmp_path):
     """Test that a TOML config file is loaded correctly."""
     config_path = tmp_path / "config.toml"
     config_content = """
-    tts_voice = "test_voice"
-    timeout = 30
+    [general]
+    default_timeout = 30
+    output_dir = "/tmp/wikibee"
+    verbose = true
+
+    [tts]
+    default_voice = "test_voice"
+    server_url = "http://localhost:9000"
+    format = "wav"
+    normalize = true
+    heading_prefix = "Section:"
+
+    [search]
+    auto_select = true
+    search_limit = 5
     """
     config_path.write_text(config_content)
 
     expected_config = {
-        "tts_voice": "test_voice",
         "timeout": 30,
+        "output_dir": "/tmp/wikibee",
+        "verbose": True,
+        "tts_voice": "test_voice",
+        "tts_server": "http://localhost:9000",
+        "tts_format": "wav",
+        "tts_normalize": True,
+        "heading_prefix": "Section:",
+        "yolo": True,
+        "search_limit": 5,
     }
 
     with patch("wikibee.config.get_config_path", return_value=config_path):
         loaded_config = config.load_config()
         assert loaded_config == expected_config
+
+
+def test_load_config_flat_keys_preserved(tmp_path):
+    """Flat TOML keys should still be supported for backward compatibility."""
+    config_path = tmp_path / "config.toml"
+    config_path.write_text("timeout = 45\nlead_only = true\n")
+
+    with patch("wikibee.config.get_config_path", return_value=config_path):
+        loaded_config = config.load_config()
+
+    assert loaded_config["timeout"] == 45
+    assert loaded_config["lead_only"] is True
 
 
 def test_merge_configs():
@@ -50,3 +83,14 @@ def test_merge_configs():
     assert merged["timeout"] == 30  # from config_file, overrides default
     assert merged["tts_voice"] == "cli_voice"  # from cli_args, overrides default
     assert merged["output_dir"] == "/cli/output"  # from cli_args, overrides config_file
+
+
+def test_merge_configs_cli_override_with_default_value():
+    """CLI values should override config even if they match the defaults."""
+    defaults = {"tts_format": "mp3"}
+    config_file = {"tts_format": "wav"}
+    cli_args = {"tts_format": "mp3"}
+
+    merged = config.merge_configs(defaults, config_file, cli_args)
+
+    assert merged["tts_format"] == "mp3"

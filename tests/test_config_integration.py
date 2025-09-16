@@ -1,3 +1,4 @@
+from pathlib import Path
 from unittest.mock import MagicMock
 
 from typer.testing import CliRunner
@@ -18,8 +19,17 @@ def test_config_precedence(monkeypatch, tmp_path):
     config_path = tmp_path / "config.toml"
     config_path.write_text(
         """
-timeout = 20
-tts_voice = "config-voice"
+[general]
+default_timeout = 20
+verbose = true
+
+[tts]
+default_voice = "config-voice"
+normalize = true
+
+[search]
+auto_select = true
+search_limit = 6
 """
     )
 
@@ -45,6 +55,8 @@ tts_voice = "config-voice"
             "https://example.org/wiki/Fake",
             "--timeout",
             "30",  # CLI override
+            "--search-limit",
+            "8",  # CLI override beats config value of 6
             # tts_voice is NOT provided, so config value should be used
             # lead_only is NOT provided, so default should be used
         ],
@@ -65,6 +77,16 @@ tts_voice = "config-voice"
 
     # Default value: lead_only=False should be used
     assert final_args.lead_only is False
+
+    # Config-driven verbosity should be respected
+    assert final_args.verbose is True
+
+    # CLI override should win for search_limit
+    assert final_args.search_limit == 8
+
+    # Config should enable yolo mode and normalization
+    assert final_args.yolo is True
+    assert final_args.tts_normalize is True
 
 
 def test_config_init(monkeypatch, tmp_path):
@@ -91,5 +113,23 @@ def test_config_init(monkeypatch, tmp_path):
     with open(config_path, "rb") as f:
         created_config = tomli.load(f)
 
-    expected_config = {k: v for k, v in cli.DEFAULTS.items() if v is not None}
+    expected_config = {
+        "general": {
+            "output_dir": str(Path.home() / "wikibee"),
+            "default_timeout": int(cli.DEFAULTS["timeout"]),
+            "lead_only": bool(cli.DEFAULTS["lead_only"]),
+            "verbose": bool(cli.DEFAULTS["verbose"]),
+        },
+        "tts": {
+            "server_url": str(cli.DEFAULTS["tts_server"]),
+            "default_voice": str(cli.DEFAULTS["tts_voice"]),
+            "format": str(cli.DEFAULTS["tts_format"]),
+            "normalize": bool(cli.DEFAULTS["tts_normalize"]),
+        },
+        "search": {
+            "auto_select": bool(cli.DEFAULTS["yolo"]),
+            "search_limit": int(cli.DEFAULTS["search_limit"]),
+        },
+    }
+
     assert created_config == expected_config
