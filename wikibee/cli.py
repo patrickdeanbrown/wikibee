@@ -5,18 +5,13 @@ import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, cast
+from typing import Dict, Final, List, Optional, Tuple
 
 import click
 import requests
 import typer
 from rich.console import Console
 from typer.core import TyperGroup
-
-try:  # pragma: no cover - Click < 8 fallback
-    from click.core import ParameterSource
-except ImportError:  # pragma: no cover
-    ParameterSource = None  # type: ignore[assignment]
 
 from . import config  # re-exported for tests to monkeypatch
 from . import formatting as _formatting
@@ -43,7 +38,7 @@ class _DefaultGroup(TyperGroup):
 
     def resolve_command(
         self, ctx: click.Context, args: List[str]
-    ) -> Tuple[Optional[str], click.Command | None, List[str]]:
+    ) -> Tuple[Optional[str], Optional[click.Command], List[str]]:
         if (
             args
             and args[0] not in self.commands
@@ -57,25 +52,38 @@ app = typer.Typer(cls=_DefaultGroup, no_args_is_help=True)
 console = Console()
 
 DEFAULT_OUTPUT_DIR = os.path.join(os.getcwd(), "output")
-DEFAULT_SEARCH_LIMIT = 10
+DEFAULT_SEARCH_LIMIT: Final[int] = 10
+DEFAULT_TIMEOUT: Final[int] = 15
+DEFAULT_LEAD_ONLY: Final[bool] = False
+DEFAULT_TTS_VOICE: Final[str] = "af_sky+af_bella"
+DEFAULT_TTS_FORMAT: Final[str] = "mp3"
+DEFAULT_TTS_SERVER: Final[str] = "http://localhost:8880/v1"
+DEFAULT_FILENAME: Final[Optional[str]] = None
+DEFAULT_NO_SAVE: Final[bool] = False
+DEFAULT_VERBOSE: Final[bool] = False
+DEFAULT_HEADING_PREFIX: Final[Optional[str]] = None
+DEFAULT_TTS_FILE: Final[bool] = False
+DEFAULT_TTS_AUDIO: Final[bool] = False
+DEFAULT_YOLO: Final[bool] = False
+DEFAULT_TTS_NORMALIZE: Final[bool] = False
 
 DEFAULTS: Dict[str, object] = {
     # CLI/config defaults (CLI args override these; config can override defaults)
-    "timeout": 15,
-    "lead_only": False,
-    "tts_voice": "af_sky+af_bella",
-    "tts_format": "mp3",
-    "tts_server": "http://localhost:8880/v1",
+    "timeout": DEFAULT_TIMEOUT,
+    "lead_only": DEFAULT_LEAD_ONLY,
+    "tts_voice": DEFAULT_TTS_VOICE,
+    "tts_format": DEFAULT_TTS_FORMAT,
+    "tts_server": DEFAULT_TTS_SERVER,
     "output_dir": DEFAULT_OUTPUT_DIR,
-    "filename": None,
-    "no_save": False,
-    "verbose": False,
-    "heading_prefix": None,
-    "tts_file": False,
-    "tts_audio": False,
-    "yolo": False,
+    "filename": DEFAULT_FILENAME,
+    "no_save": DEFAULT_NO_SAVE,
+    "verbose": DEFAULT_VERBOSE,
+    "heading_prefix": DEFAULT_HEADING_PREFIX,
+    "tts_file": DEFAULT_TTS_FILE,
+    "tts_audio": DEFAULT_TTS_AUDIO,
+    "yolo": DEFAULT_YOLO,
     "search_limit": DEFAULT_SEARCH_LIMIT,
-    "tts_normalize": False,
+    "tts_normalize": DEFAULT_TTS_NORMALIZE,
 }
 
 
@@ -97,6 +105,47 @@ class Args:
     yolo: bool
     search_limit: int
     tts_normalize: bool
+
+
+def _coerce_bool(value: object, default: bool) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    if isinstance(value, str):
+        lowered = value.strip().lower()
+        if lowered in {"1", "true", "yes", "on"}:
+            return True
+        if lowered in {"0", "false", "no", "off"}:
+            return False
+    return default
+
+
+def _coerce_int(value: object, default: int) -> int:
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    if isinstance(value, str):
+        try:
+            return int(value.strip())
+        except ValueError:
+            return default
+    return default
+
+
+def _coerce_str(value: object, default: str) -> str:
+    if value is None:
+        return default
+    return str(value)
+
+
+def _coerce_optional_str(value: object, default: Optional[str]) -> Optional[str]:
+    if value is None:
+        return default
+    return str(value)
 
 
 def _handle_search(search_term: str, args: Args) -> Optional[str]:
@@ -144,17 +193,19 @@ def _collect_cli_overrides(
     """Return CLI values that should override config values."""
 
     overrides: Dict[str, object] = {}
-    if ParameterSource is not None:
-        override_sources = {ParameterSource.COMMANDLINE, ParameterSource.ENVIRONMENT}
+    get_source = getattr(ctx, "get_parameter_source", None)
+    if callable(get_source):
+        override_names = {"COMMANDLINE", "ENVIRONMENT"}
         for param_name, (config_key, value) in raw_cli_values.items():
             if value is None:
                 continue
-            if ctx.get_parameter_source(param_name) in override_sources:
+            source = get_source(param_name)
+            source_name = getattr(source, "name", None)
+            if isinstance(source_name, str) and source_name.upper() in override_names:
                 overrides[config_key] = value
         return overrides
 
-    # pragma: no cover - Click < 8 fallback
-    for param_name, (config_key, value) in raw_cli_values.items():
+    for _, (config_key, value) in raw_cli_values.items():  # pragma: no cover
         if value is None:
             continue
         default_value = DEFAULTS.get(config_key)
@@ -173,20 +224,24 @@ def _build_args_from_merged(article: str, merged: Dict[str, object]) -> Args:
     return Args(
         article=article,
         output_dir=output_dir_value,
-        filename=cast(Optional[str], merged.get("filename")),
-        no_save=bool(merged.get("no_save", DEFAULTS["no_save"])),
-        timeout=int(merged.get("timeout", DEFAULTS["timeout"])),
-        lead_only=bool(merged.get("lead_only", DEFAULTS["lead_only"])),
-        tts_file=bool(merged.get("tts_file", DEFAULTS["tts_file"])),
-        heading_prefix=cast(Optional[str], merged.get("heading_prefix")),
-        verbose=bool(merged.get("verbose", DEFAULTS["verbose"])),
-        tts_audio=bool(merged.get("tts_audio", DEFAULTS["tts_audio"])),
-        tts_server=cast(str, merged.get("tts_server", DEFAULTS["tts_server"])),
-        tts_voice=cast(Optional[str], merged.get("tts_voice", DEFAULTS["tts_voice"])),
-        tts_format=cast(str, merged.get("tts_format", DEFAULTS["tts_format"])),
-        yolo=bool(merged.get("yolo", DEFAULTS["yolo"])),
-        search_limit=int(merged.get("search_limit", DEFAULT_SEARCH_LIMIT)),
-        tts_normalize=bool(merged.get("tts_normalize", DEFAULTS["tts_normalize"])),
+        filename=_coerce_optional_str(merged.get("filename"), DEFAULT_FILENAME),
+        no_save=_coerce_bool(merged.get("no_save"), DEFAULT_NO_SAVE),
+        timeout=_coerce_int(merged.get("timeout"), DEFAULT_TIMEOUT),
+        lead_only=_coerce_bool(merged.get("lead_only"), DEFAULT_LEAD_ONLY),
+        tts_file=_coerce_bool(merged.get("tts_file"), DEFAULT_TTS_FILE),
+        heading_prefix=_coerce_optional_str(
+            merged.get("heading_prefix"), DEFAULT_HEADING_PREFIX
+        ),
+        verbose=_coerce_bool(merged.get("verbose"), DEFAULT_VERBOSE),
+        tts_audio=_coerce_bool(merged.get("tts_audio"), DEFAULT_TTS_AUDIO),
+        tts_server=_coerce_str(merged.get("tts_server"), DEFAULT_TTS_SERVER),
+        tts_voice=_coerce_optional_str(merged.get("tts_voice"), DEFAULT_TTS_VOICE),
+        tts_format=_coerce_str(merged.get("tts_format"), DEFAULT_TTS_FORMAT),
+        yolo=_coerce_bool(merged.get("yolo"), DEFAULT_YOLO),
+        search_limit=_coerce_int(merged.get("search_limit"), DEFAULT_SEARCH_LIMIT),
+        tts_normalize=_coerce_bool(
+            merged.get("tts_normalize"), DEFAULT_TTS_NORMALIZE
+        ),
     )
 
 
@@ -626,26 +681,26 @@ def config_init(
     default_sections: Dict[str, Dict[str, object]] = {
         "general": {
             "output_dir": str(Path.home() / "wikibee"),
-            "default_timeout": int(DEFAULTS["timeout"]),
-            "lead_only": bool(DEFAULTS["lead_only"]),
-            "no_save": bool(DEFAULTS["no_save"]),
-            "verbose": bool(DEFAULTS["verbose"]),
+            "default_timeout": DEFAULT_TIMEOUT,
+            "lead_only": DEFAULT_LEAD_ONLY,
+            "no_save": DEFAULT_NO_SAVE,
+            "verbose": DEFAULT_VERBOSE,
         },
         "tts": {
-            "server_url": cast(str, DEFAULTS["tts_server"]),
-            "default_voice": cast(str, DEFAULTS["tts_voice"]),
-            "format": cast(str, DEFAULTS["tts_format"]),
-            "normalize": bool(DEFAULTS["tts_normalize"]),
-            "file": bool(DEFAULTS["tts_file"]),
-            "audio": bool(DEFAULTS["tts_audio"]),
+            "server_url": DEFAULT_TTS_SERVER,
+            "default_voice": DEFAULT_TTS_VOICE,
+            "format": DEFAULT_TTS_FORMAT,
+            "normalize": DEFAULT_TTS_NORMALIZE,
+            "file": DEFAULT_TTS_FILE,
+            "audio": DEFAULT_TTS_AUDIO,
         },
         "search": {
-            "auto_select": bool(DEFAULTS["yolo"]),
-            "search_limit": int(DEFAULTS["search_limit"]),
+            "auto_select": DEFAULT_YOLO,
+            "search_limit": DEFAULT_SEARCH_LIMIT,
         },
     }
 
-    heading_prefix_default = DEFAULTS.get("heading_prefix")
+    heading_prefix_default = DEFAULT_HEADING_PREFIX
     if heading_prefix_default:
         default_sections["tts"]["heading_prefix"] = heading_prefix_default
 
