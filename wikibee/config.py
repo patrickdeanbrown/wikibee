@@ -5,8 +5,9 @@ from __future__ import annotations
 import logging
 import sys
 from collections.abc import Mapping
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional, Type, cast
 
 import platformdirs
 
@@ -16,6 +17,171 @@ else:
     import tomli as tomllib
 
 logger = logging.getLogger(__name__)
+
+
+def _coerce_bool(value: object, default: bool) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    if isinstance(value, str):
+        lowered = value.strip().lower()
+        if lowered in {"1", "true", "yes", "on"}:
+            return True
+        if lowered in {"0", "false", "no", "off"}:
+            return False
+    return default
+
+
+def _coerce_int(value: object, default: int) -> int:
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    if isinstance(value, str):
+        try:
+            return int(value.strip())
+        except ValueError:
+            raise ValueError(f"Invalid integer value: {value}") from None
+    if value is None:
+        return default
+    raise ValueError(f"Invalid integer value: {value}")
+
+
+def _coerce_str(value: object, default: str) -> str:
+    if value is None:
+        return default
+    return str(value)
+
+
+def _coerce_optional_str(value: object, default: Optional[str]) -> Optional[str]:
+    if value is None:
+        return default
+    return str(value)
+
+
+if sys.version_info >= (3, 10):
+
+    @dataclass(slots=True)
+    class RuntimeConfig:
+        timeout: int
+        lead_only: bool
+        tts_voice: Optional[str]
+        tts_format: str
+        tts_server: str
+        output_dir: str
+        filename: Optional[str]
+        no_save: bool
+        verbose: bool
+        heading_prefix: Optional[str]
+        tts_file: bool
+        tts_audio: bool
+        yolo: bool
+        search_limit: int
+        tts_normalize: bool
+
+        @classmethod
+        def from_sources(
+            cls,
+            defaults: Dict[str, object],
+            config_file: Dict[str, object],
+            cli_args: Dict[str, object],
+        ) -> "RuntimeConfig":
+            return _build_runtime_config(cls, defaults, config_file, cli_args)
+
+else:
+
+    @dataclass
+    class RuntimeConfig:
+        timeout: int
+        lead_only: bool
+        tts_voice: Optional[str]
+        tts_format: str
+        tts_server: str
+        output_dir: str
+        filename: Optional[str]
+        no_save: bool
+        verbose: bool
+        heading_prefix: Optional[str]
+        tts_file: bool
+        tts_audio: bool
+        yolo: bool
+        search_limit: int
+        tts_normalize: bool
+
+        @classmethod
+        def from_sources(
+            cls,
+            defaults: Dict[str, object],
+            config_file: Dict[str, object],
+            cli_args: Dict[str, object],
+        ) -> "RuntimeConfig":
+            return _build_runtime_config(cls, defaults, config_file, cli_args)
+
+
+def _build_runtime_config(
+    cls: Type[RuntimeConfig],
+    defaults: Dict[str, object],
+    config_file: Dict[str, object],
+    cli_args: Dict[str, object],
+) -> RuntimeConfig:
+    merged: Dict[str, object] = defaults.copy()
+    merged.update(config_file)
+    for key, value in cli_args.items():
+        if value is None:
+            continue
+        merged[key] = value
+
+    try:
+        timeout_default = cast(int, defaults["timeout"])
+        search_limit_default = cast(int, defaults["search_limit"])
+    except KeyError as exc:  # pragma: no cover - developer misuse
+        raise ValueError(f"Missing required default value: {exc}") from exc
+
+    timeout = _coerce_int(merged.get("timeout"), timeout_default)
+    search_limit = _coerce_int(merged.get("search_limit"), search_limit_default)
+
+    if search_limit <= 0:
+        raise ValueError("search_limit must be positive")
+
+    output_dir = str(
+        Path(
+            _coerce_str(merged.get("output_dir"), str(defaults["output_dir"]))
+        ).expanduser()
+    )
+
+    return cls(
+        timeout=timeout,
+        lead_only=_coerce_bool(merged.get("lead_only"), bool(defaults["lead_only"])),
+        tts_voice=_coerce_optional_str(
+            merged.get("tts_voice"), cast(Optional[str], defaults.get("tts_voice"))
+        ),
+        tts_format=_coerce_str(
+            merged.get("tts_format"), cast(str, defaults["tts_format"])
+        ),
+        tts_server=_coerce_str(
+            merged.get("tts_server"), cast(str, defaults["tts_server"])
+        ),
+        output_dir=output_dir,
+        filename=_coerce_optional_str(
+            merged.get("filename"), cast(Optional[str], defaults.get("filename"))
+        ),
+        no_save=_coerce_bool(merged.get("no_save"), bool(defaults["no_save"])),
+        verbose=_coerce_bool(merged.get("verbose"), bool(defaults["verbose"])),
+        heading_prefix=_coerce_optional_str(
+            merged.get("heading_prefix"),
+            cast(Optional[str], defaults.get("heading_prefix")),
+        ),
+        tts_file=_coerce_bool(merged.get("tts_file"), bool(defaults["tts_file"])),
+        tts_audio=_coerce_bool(merged.get("tts_audio"), bool(defaults["tts_audio"])),
+        yolo=_coerce_bool(merged.get("yolo"), bool(defaults["yolo"])),
+        search_limit=search_limit,
+        tts_normalize=_coerce_bool(
+            merged.get("tts_normalize"), bool(defaults["tts_normalize"])
+        ),
+    )
 
 
 def get_config_path() -> Path:
@@ -101,23 +267,7 @@ def merge_configs(
     defaults: Dict[str, Any],
     config_file: Dict[str, Any],
     cli_args: Dict[str, Any],
-) -> Dict[str, Any]:
-    """
-    Merges configurations from defaults, config file, and CLI arguments.
+) -> RuntimeConfig:
+    """Return a validated config model using precedence CLI > file > defaults."""
 
-    Args:
-        defaults: Dictionary of default values.
-        config_file: Dictionary of values from the config file.
-        cli_args: Dictionary of values from the command line.
-
-    Returns:
-        dict: The merged configuration.
-    """
-    merged = defaults.copy()
-    merged.update(config_file)
-
-    for key, value in cli_args.items():
-        if value is None:
-            continue
-        merged[key] = value
-    return merged
+    return RuntimeConfig.from_sources(defaults, config_file, cli_args)

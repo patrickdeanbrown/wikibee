@@ -1,33 +1,19 @@
-r"""Smoke runner that exercises wikibee's extraction pipeline.
+r"""Smoke runner that exercises wikibee's extraction pipeline."""
 
-By default this script performs two operations:
-
-1. Direct URL extraction for a compact article (Altiplano).
-2. Search flow using the query "Antarctic Intermediate Water" and extracting
-   the top hit returned by the Wikipedia API.
-
-Markdown (and optional TTS-friendly text) artefacts are written to the chosen
-output directory so the results can be inspected manually."""
+from __future__ import annotations
 
 import argparse
-import os
-import sys
 from pathlib import Path
 from typing import Optional
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-from extract import extract_wikipedia_text, make_tts_friendly, sanitize_filename
-from wikibee.client import WikiClient
-from wikibee.formatting import write_text_file
+from wikibee.commands import extract as extract_cmd
+from wikibee.services import OutputManager, SearchError, SearchService, TTSService
 from wikibee.tts_openai import TTSClientError, TTSOpenAIClient
 
 
-def main():
+def main() -> int:
     parser = argparse.ArgumentParser(
-        description=(
-            "Smoke test: extract a real Wikipedia article and " "save outputs"
-        ),
+        description="Smoke test: extract real Wikipedia content and save outputs",
     )
     parser.add_argument(
         "url",
@@ -102,13 +88,14 @@ def main():
 
     out_dir = Path(args.output_dir).expanduser().resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
+    output_manager = OutputManager(out_dir, audio_format=args.tts_format)
 
     print(f"Running smoke extract for URL: {args.url}")
     url_status = _extract_and_write(
         source_name="url",
         identifier=args.url,
         url=args.url,
-        out_dir=out_dir,
+        output_manager=output_manager,
         lead_only=args.lead_only,
         timeout=args.timeout,
         tts_file=args.tts_file,
@@ -125,7 +112,7 @@ def main():
         search_status = _search_and_extract(
             term=args.search_term,
             limit=args.search_limit,
-            out_dir=out_dir,
+            output_manager=output_manager,
             lead_only=args.lead_only,
             timeout=args.timeout,
             tts_file=args.tts_file,
@@ -146,7 +133,7 @@ def main():
 def _search_and_extract(
     term: str,
     limit: int,
-    out_dir: Path,
+    output_manager: OutputManager,
     lead_only: bool,
     timeout: int,
     tts_file: bool,
@@ -156,10 +143,10 @@ def _search_and_extract(
     tts_voice: Optional[str],
     tts_format: str,
 ) -> int:
-    client = WikiClient()
+    service = SearchService()
     try:
-        results = client.search_articles(term, limit=limit, timeout=timeout)
-    except Exception as exc:  # pragma: no cover - network smoke
+        results = service.search(term, limit=limit, timeout=timeout)
+    except SearchError as exc:  # pragma: no cover - network smoke
         print(f"Search request failed for '{term}': {exc}")
         return 3
 
@@ -169,12 +156,12 @@ def _search_and_extract(
 
     top_result = results[0]
     url = top_result["url"]
-    identifier = f"search-{sanitize_filename(top_result['title'])}"
+    identifier = f"search-{extract_cmd.sanitize_filename(top_result['title'])}"
     return _extract_and_write(
         source_name="search",
         identifier=identifier,
         url=url,
-        out_dir=out_dir,
+        output_manager=output_manager,
         lead_only=lead_only,
         timeout=timeout,
         tts_file=tts_file,
@@ -190,7 +177,7 @@ def _extract_and_write(
     source_name: str,
     identifier: str,
     url: str,
-    out_dir: Path,
+    output_manager: OutputManager,
     lead_only: bool,
     timeout: int,
     tts_file: bool,
@@ -200,75 +187,52 @@ def _extract_and_write(
     tts_voice: Optional[str],
     tts_format: str,
 ) -> int:
-    text, title = extract_wikipedia_text(url, timeout=timeout, lead_only=lead_only)
+    text, title = extract_cmd.extract_wikipedia_text(
+        url,
+        timeout=timeout,
+        lead_only=lead_only,
+    )
     if text is None:
         print(f"Extraction failed or returned no text for: {url}")
         return 2
 
-    safe_base = sanitize_filename(title or identifier)
-    md_path = out_dir / f"{safe_base}.md"
-    tts_path = out_dir / f"{safe_base}.txt"
-    audio_path = out_dir / f"{safe_base}.{tts_format}"
+    markdown_content = f"# {title}\n\n{text}\n"
+    paths = output_manager.prepare_paths(page_title=title or identifier, filename=None)
+    output_manager.write_markdown(paths, markdown_content)
+    print(f"[{source_name}] Wrote markdown to: {paths.markdown_path}")
 
-    # Write files safely
-    try:
-        write_text_file(str(md_path), str(out_dir), f"# {title}\n\n{text}\n")
-        print(f"[{source_name}] Wrote markdown to: {md_path}")
-        if tts_file:
-            tts_text = make_tts_friendly(
-                f"# {title}\n\n{text}\n", heading_prefix=heading_prefix
-            )
-            write_text_file(str(tts_path), str(out_dir), tts_text)
-            print(f"[{source_name}] Wrote TTS-friendly text to: {tts_path}")
-        if tts_audio:
-            _write_audio(
-                title=title or identifier,
-                markdown=f"# {title}\n\n{text}\n",
-                audio_path=audio_path,
-                out_dir=out_dir,
-                tts_server=tts_server,
-                tts_voice=tts_voice,
-                tts_format=tts_format,
+    if tts_file:
+        output_manager.write_tts_copy(
+            paths,
+            markdown_content,
+            heading_prefix=heading_prefix,
+            normalize=True,
+        )
+        print(f"[{source_name}] Wrote TTS-friendly text to: {paths.tts_path}")
+
+    if tts_audio:
+        service = TTSService(
+            client=TTSOpenAIClient(base_url=tts_server),
+            output_manager=output_manager,
+        )
+        try:
+            saved = service.synthesize_audio(
+                markdown=markdown_content,
+                paths=paths,
                 heading_prefix=heading_prefix,
-                tts_file=tts_file,
+                normalize=True,
+                voice=tts_voice,
+                file_format=tts_format,
             )
-    except Exception as exc:  # pragma: no cover - smoke diagnostics
-        print(f"[{source_name}] Failed to write outputs: {exc}")
-        return 1
+            print(f"[audio] Wrote audio to: {saved}")
+        except TTSClientError as exc:
+            cause = exc.__cause__ or exc.__context__
+            if cause is not None:
+                print(f"[audio] TTS synthesis failed: {exc} ({cause})")
+            else:
+                print(f"[audio] TTS synthesis failed: {exc}")
 
     return 0
-
-
-def _write_audio(
-    title: str,
-    markdown: str,
-    audio_path: Path,
-    out_dir: Path,
-    tts_server: str,
-    tts_voice: Optional[str],
-    tts_format: str,
-    heading_prefix: Optional[str],
-    tts_file: bool,
-) -> None:
-    try:
-        tts_client = TTSOpenAIClient(base_url=tts_server)
-        tts_ready = make_tts_friendly(
-            markdown, heading_prefix=heading_prefix if tts_file else None
-        )
-        saved = tts_client.synthesize_to_file(
-            tts_ready,
-            dest_path=str(audio_path.relative_to(out_dir)),
-            base_dir=str(out_dir),
-            voice=tts_voice,
-            file_format=tts_format,
-        )
-        print(f"[audio] Wrote audio to: {saved}")
-    except TTSClientError as exc:
-        cause = exc.__cause__ or exc.__context__
-        if cause is not None:
-            print(f"[audio] TTS synthesis failed: {exc} ({cause})")
-        else:
-            print(f"[audio] TTS synthesis failed: {exc}")
 
 
 if __name__ == "__main__":
