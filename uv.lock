@@ -1724,6 +1724,7 @@ dependencies = [
     { name = "inflect", version = "7.4.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "inflect", version = "7.5.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
     { name = "num2words" },
+    { name = "openai" },
     { name = "platformdirs", version = "4.3.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "platformdirs", version = "4.4.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
     { name = "requests", version = "2.32.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
@@ -1750,9 +1751,6 @@ dev = [
     { name = "types-requests", version = "2.32.0.20241016", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "types-requests", version = "2.32.4.20250913", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
 ]
-tts = [
-    { name = "openai" },
-]
 
 [package.dev-dependencies]
 dev = [
@@ -1771,9 +1769,6 @@ dev = [
     { name = "types-requests", version = "2.32.0.20241016", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.9'" },
     { name = "types-requests", version = "2.32.4.20250913", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
 ]
-tts = [
-    { name = "openai" },
-]
 
 [package.metadata]
 requires-dist = [
@@ -1782,7 +1777,7 @@ requires-dist = [
     { name = "isort", marker = "extra == 'dev'", specifier = ">=5.12.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10.0" },
     { name = "num2words", specifier = ">=0.5.0" },
-    { name = "openai", marker = "extra == 'tts'", specifier = ">=1.0.0" },
+    { name = "openai", specifier = ">=1.0.0" },
     { name = "platformdirs", specifier = ">=4.0" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.5.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=6.0" },
@@ -1794,7 +1789,7 @@ requires-dist = [
     { name = "typer", specifier = ">=0.12" },
     { name = "types-requests", marker = "extra == 'dev'" },
 ]
-provides-extras = ["dev", "tts"]
+provides-extras = ["dev"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -1807,7 +1802,6 @@ dev = [
     { name = "ruff", specifier = ">=0.0.0" },
     { name = "types-requests" },
 ]
-tts = [{ name = "openai", specifier = ">=1.0.0" }]
 
 [[package]]
 name = "zipp"
