@@ -7,6 +7,7 @@ import nox
 PY_VERSIONS = ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
 
 nox.options.sessions = ["lint", "typecheck", "tests"]
+nox.options.force_venv_backend = "venv"
 
 
 @nox.session(python="3.11")
