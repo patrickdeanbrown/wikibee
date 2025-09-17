@@ -1,11 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if ! command -v uv >/dev/null 2>&1; then
-  echo "uv is required for this script. Install it from https://docs.astral.sh/uv/" >&2
-  exit 2
-fi
-
 EXCLUDES=(".venv" ".uv-cache")
 ISORT_SKIP=()
 RUFF_EXCLUDES=()

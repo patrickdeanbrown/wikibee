@@ -1,8 +1,4 @@
-"""Configuration management for wikibee."""
-
-from __future__ import annotations
-
-import logging
+# Configuration management for wikibee
 import sys
 from collections.abc import Mapping
 from pathlib import Path
@@ -14,8 +10,6 @@ if sys.version_info >= (3, 11):
     import tomllib
 else:
     import tomli as tomllib
-
-logger = logging.getLogger(__name__)
 
 
 def get_config_path() -> Path:
@@ -74,26 +68,17 @@ def _normalize_config_data(data: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def load_config() -> Dict[str, Any]:
-    """Load configuration, returning an empty mapping on failure."""
+    """
+    Loads the configuration from the TOML file.
 
+    Returns:
+        dict: The configuration dictionary, or an empty dict if not found.
+    """
     config_path = get_config_path()
     if not config_path.exists():
         return {}
-
-    try:
-        with open(config_path, "rb") as f:
-            parsed: Dict[str, Any] = tomllib.load(f)
-    except FileNotFoundError:
-        # Race between exists() and open(); behave as if file were absent.
-        logger.debug("Config file %s disappeared before it could be read", config_path)
-        return {}
-    except tomllib.TOMLDecodeError as exc:
-        logger.warning("Failed to parse config %s: %s", config_path, exc)
-        return {}
-    except OSError as exc:
-        logger.warning("Unable to read config %s: %s", config_path, exc)
-        return {}
-
+    with open(config_path, "rb") as f:
+        parsed: Dict[str, Any] = tomllib.load(f)
     return _normalize_config_data(parsed)
 
 

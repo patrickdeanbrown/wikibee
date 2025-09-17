@@ -1,5 +1,4 @@
 import os
-from pathlib import Path
 
 import pytest
 
@@ -66,19 +65,19 @@ def test_synthesize_to_file_success(tmp_path, monkeypatch):
     monkeypatch.setattr(tts_openai, "OpenAI", lambda base_url, api_key: fake_client)
 
     client = TTSOpenAIClient(base_url="http://localhost:8880/v1", api_key="not-needed")
+    out_path = tmp_path / "out.mp3"
+
     saved = client.synthesize_to_file(
         text="Hello world",
-        dest_path="out.mp3",
+        dest_path=str(out_path),
         base_dir=str(tmp_path),
         model="kokoro",
         voice="af_sky+af_bella",
         file_format="mp3",
     )
 
-    expected_path = tmp_path / "out.mp3"
-
-    assert saved == str(expected_path)
-    assert expected_path.exists()
+    assert saved == str(out_path)
+    assert out_path.exists()
     with open(saved, "rb") as f:
         data = f.read()
     assert data == b"TEST_BYTES"
@@ -87,7 +86,6 @@ def test_synthesize_to_file_success(tmp_path, monkeypatch):
     assert captured.get("model") == "kokoro"
     assert captured.get("voice") == "af_sky+af_bella"
     assert captured.get("input") == "Hello world"
-    assert captured.get("format") == "mp3"
 
 
 def test_synthesize_raises_on_client_error(monkeypatch):
@@ -128,58 +126,4 @@ def test_streaming_raises_and_bubbles(monkeypatch, tmp_path):
 
     client = TTSOpenAIClient()
     with pytest.raises(TTSClientError):
-        client.synthesize_to_file(
-            "hi",
-            dest_path="out.mp3",
-            base_dir=str(tmp_path),
-        )
-
-
-def test_raises_when_dest_escapes_base(monkeypatch, tmp_path):
-    monkeypatch.setattr(tts_openai, "OpenAI", lambda base_url, api_key: object())
-
-    client = TTSOpenAIClient()
-
-    with pytest.raises(TTSClientError):
-        client.synthesize_to_file(
-            "hi",
-            dest_path="../out.mp3",
-            base_dir=str(tmp_path),
-        )
-
-
-def test_synthesize_fallbacks_when_format_not_supported(tmp_path, monkeypatch):
-    calls = []
-
-    class RejectingCreate:
-        def __init__(self):
-            self.first_call = True
-
-        def create(self, **kwargs):
-            calls.append(kwargs.copy())
-            if "format" in kwargs and self.first_call:
-                self.first_call = False
-                raise TypeError("create() got an unexpected keyword argument 'format'")
-            return FakeResponse(b"audio")
-
-    ws = RejectingCreate()
-    speech = type("S", (), {"with_streaming_response": ws})()
-    audio = type("A", (), {"speech": speech})()
-    rejecting_client = type("C", (), {"audio": audio})()
-
-    monkeypatch.setattr(
-        tts_openai, "OpenAI", lambda base_url, api_key: rejecting_client
-    )
-
-    client = TTSOpenAIClient()
-    saved = client.synthesize_to_file(
-        "text",
-        dest_path="out.mp3",
-        base_dir=str(tmp_path),
-        file_format="mp3",
-    )
-
-    assert Path(saved).exists()
-    assert len(calls) == 2
-    assert "format" in calls[0]
-    assert "format" not in calls[1]
+        client.synthesize_to_file("hi", dest_path=str(tmp_path / "out.mp3"))

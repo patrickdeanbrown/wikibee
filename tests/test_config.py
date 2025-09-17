@@ -65,7 +65,7 @@ def test_load_config_with_file(tmp_path):
 
     with patch("wikibee.config.get_config_path", return_value=config_path):
         loaded_config = config.load_config()
-    assert loaded_config == expected_config
+        assert loaded_config == expected_config
 
 
 def test_load_config_flat_keys_preserved(tmp_path):
@@ -78,38 +78,6 @@ def test_load_config_flat_keys_preserved(tmp_path):
 
     assert loaded_config["timeout"] == 45
     assert loaded_config["lead_only"] is True
-
-
-def test_load_config_invalid_toml(tmp_path, caplog):
-    config_path = tmp_path / "config.toml"
-    config_path.write_text("invalid = [this is not toml")
-
-    with patch("wikibee.config.get_config_path", return_value=config_path):
-        with caplog.at_level("WARNING"):
-            loaded_config = config.load_config()
-
-    assert loaded_config == {}
-    assert "Failed to parse config" in " ".join(caplog.messages)
-
-
-def test_load_config_unreadable_file(tmp_path, monkeypatch, caplog):
-    config_path = tmp_path / "config.toml"
-    config_path.write_text("timeout = 10")
-
-    class Boom(IOError):
-        pass
-
-    def _boom(*args, **kwargs):
-        raise Boom("permission denied")
-
-    monkeypatch.setattr(config, "get_config_path", lambda: config_path)
-    monkeypatch.setattr("builtins.open", _boom)
-
-    with caplog.at_level("WARNING"):
-        loaded = config.load_config()
-
-    assert loaded == {}
-    assert "Unable to read config" in " ".join(caplog.messages)
 
 
 def test_merge_configs():
