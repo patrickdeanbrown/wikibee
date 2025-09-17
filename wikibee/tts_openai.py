@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, Optional
 
 # Allow tests to monkeypatch `OpenAI` at module level without requiring the
@@ -16,6 +17,59 @@ except Exception:  # pragma: no cover - import-time fallback
 
 class TTSClientError(RuntimeError):
     pass
+
+
+def _resolve_dest_path(dest_path: str, base_dir: str) -> Path:
+    """Resolve ``dest_path`` against ``base_dir`` and guard against traversal."""
+
+    base_path = Path(base_dir).expanduser().resolve()
+    candidate = Path(dest_path)
+    if not candidate.is_absolute():
+        candidate = base_path / candidate
+    candidate = candidate.expanduser().resolve()
+
+    try:
+        candidate.relative_to(base_path)
+    except ValueError as exc:  # Python <3.9 lacks Path.is_relative_to
+        raise TTSClientError(
+            f"Destination path '{candidate}' escapes base directory '{base_path}'"
+        ) from exc
+
+    candidate.parent.mkdir(parents=True, exist_ok=True)
+    return candidate
+
+
+def _stream_to_file(
+    client: Any,
+    dest: Path,
+    base_kwargs: dict[str, object],
+    file_format: Optional[str],
+) -> str:
+    """Stream audio to ``dest`` optionally requesting a specific format."""
+
+    attempts = [True] if file_format else []
+    attempts.append(False)
+
+    last_type_error: Optional[TypeError] = None
+    for include_format in attempts:
+        kwargs = base_kwargs.copy()
+        if include_format and file_format:
+            kwargs["format"] = file_format
+        try:
+            with client.audio.speech.with_streaming_response.create(
+                **kwargs
+            ) as response:
+                response.stream_to_file(str(dest))
+            return str(dest)
+        except TypeError as exc:
+            if include_format and "format" in str(exc):
+                last_type_error = exc
+                continue
+            raise
+
+    if last_type_error is not None:
+        raise last_type_error
+    return str(dest)
 
 
 class TTSOpenAIClient:
@@ -64,21 +118,27 @@ class TTSOpenAIClient:
                 try:
                     self.client = OpenAI(base_url=self._base_url, api_key=self._api_key)
                 except Exception as e:
-                    raise TTSClientError(e)
+                    raise TTSClientError("Failed to initialize OpenAI client") from e
 
-            create_kwargs = {"model": model, "input": text, "timeout": timeout}
+            dest = _resolve_dest_path(dest_path, base_dir)
+
+            base_kwargs = {
+                "model": model,
+                "input": text,
+                "timeout": timeout,
+            }
             if voice is not None:
-                create_kwargs["voice"] = voice
+                base_kwargs["voice"] = voice
 
-            with self.client.audio.speech.with_streaming_response.create(
-                **create_kwargs
-            ) as response:
-                # response.stream_to_file expects a path like 'output.mp3'
-                # Use the provided helper to stream to a file. The OpenAI client
-                # provides response.stream_to_file which writes the result to disk.
-                response.stream_to_file(dest_path)
+            streamed_path = _stream_to_file(
+                self.client,
+                dest,
+                base_kwargs,
+                file_format,
+            )
 
-            # If stream_to_file wrote directly, return dest_path
-            return dest_path
+            return streamed_path
+        except TTSClientError:
+            raise
         except Exception as e:
-            raise TTSClientError(e)
+            raise TTSClientError("Audio synthesis failed") from e

@@ -26,6 +26,9 @@ Install wikibee and create your first audio file in under 30 seconds:
 # Install (recommended method)
 pipx install wikibee
 
+# Optional: install TTS extras (OpenAI-compatible streaming)
+pipx inject wikibee "wikibee[tts]"
+
 # Search and convert an article
 wikibee "Albert Einstein" --tts --output my-audio/
 
@@ -40,11 +43,15 @@ That's it! You now have clean markdown and TTS-optimized text files ready for au
 ### Option 1: pipx (Recommended)
 ```bash
 pipx install wikibee
+# Enable audio synthesis support
+pipx inject wikibee "wikibee[tts]"
 ```
 
 ### Option 2: pip
 ```bash
 pip install wikibee
+# Include optional audio dependencies
+pip install "wikibee[tts]"
 ```
 
 ### Option 3: Standalone Binaries

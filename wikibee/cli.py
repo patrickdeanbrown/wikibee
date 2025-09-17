@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Final, List, Optional, Tuple
@@ -51,7 +50,7 @@ class _DefaultGroup(TyperGroup):
 app = typer.Typer(cls=_DefaultGroup, no_args_is_help=True)
 console = Console()
 
-DEFAULT_OUTPUT_DIR = os.path.join(os.getcwd(), "output")
+DEFAULT_OUTPUT_DIR = str(Path.cwd() / "output")
 DEFAULT_SEARCH_LIMIT: Final[int] = 10
 DEFAULT_TIMEOUT: Final[int] = 15
 DEFAULT_LEAD_ONLY: Final[bool] = False
@@ -218,8 +217,8 @@ def _collect_cli_overrides(
 def _build_args_from_merged(article: str, merged: Dict[str, object]) -> Args:
     """Construct the runtime Args from merged configuration values."""
 
-    output_dir_value = os.path.expanduser(
-        str(merged.get("output_dir", DEFAULT_OUTPUT_DIR))
+    output_dir_value = str(
+        Path(str(merged.get("output_dir", DEFAULT_OUTPUT_DIR))).expanduser()
     )
     return Args(
         article=article,
@@ -532,20 +531,7 @@ def extract(
         logger.error("Failed to extract text from URL")
         raise typer.Exit(code=1)
 
-    base_name = args.filename or page_title or "wikipedia_article"
-    safe_base = sanitize_filename(base_name)
-    md_name = safe_base + ".md"
-    out_dir = os.path.abspath(args.output_dir)
-    os.makedirs(out_dir, exist_ok=True)
-
-    md_path = os.path.join(out_dir, md_name)
-    if os.path.exists(md_path):
-        for i in range(1, 1000):
-            candidate = os.path.join(out_dir, f"{safe_base}_{i}.md")
-            if not os.path.exists(candidate):
-                md_path = candidate
-                break
-
+    out_dir, md_path = _prepare_output_paths(args, page_title)
     markdown_content = f"# {page_title}\n\n{result_text}\n"
     try:
         _write_outputs(args, markdown_content, md_path, out_dir, page_title)
@@ -556,14 +542,33 @@ def extract(
 app.command(name="main", hidden=True)(extract)
 
 
+def _prepare_output_paths(args: Args, page_title: Optional[str]) -> Tuple[Path, Path]:
+    safe_base = sanitize_filename(args.filename or page_title or "wikipedia_article")
+    out_dir = Path(args.output_dir).expanduser().resolve()
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    md_path = out_dir / f"{safe_base}.md"
+    if md_path.exists():
+        for i in range(1, 1000):
+            candidate = out_dir / f"{safe_base}_{i}.md"
+            if not candidate.exists():
+                md_path = candidate
+                break
+        else:
+            raise FileExistsError(
+                f"Unable to determine unique filename for base '{safe_base}'"
+            )
+
+    return out_dir, md_path
+
+
 def _produce_audio(
     markdown_content: str,
-    md_path: str,
-    out_dir: str,
+    md_path: Path,
+    out_dir: Path,
     args: Args,
 ) -> None:
-    audio_ext = "." + args.tts_format
-    audio_path = os.path.splitext(md_path)[0] + audio_ext
+    audio_path = md_path.with_suffix(f".{args.tts_format}")
     text_source = _build_tts_text(markdown_content, args)
     try:
         saved = _synthesize_audio(text_source, audio_path, out_dir, args)
@@ -586,12 +591,13 @@ def _build_tts_text(markdown_content: str, args: Args) -> str:
     return make_tts_friendly(normalized_content)
 
 
-def _synthesize_audio(text: str, audio_path: str, out_dir: str, args: Args) -> str:
+def _synthesize_audio(text: str, audio_path: Path, out_dir: Path, args: Args) -> str:
     tts_client = TTSOpenAIClient(base_url=args.tts_server)
+    dest = audio_path.relative_to(out_dir)
     return tts_client.synthesize_to_file(
         text,
-        dest_path=audio_path,
-        base_dir=out_dir,
+        dest_path=str(dest),
+        base_dir=str(out_dir),
         model="kokoro",
         voice=args.tts_voice,
         file_format=args.tts_format,
@@ -601,8 +607,8 @@ def _synthesize_audio(text: str, audio_path: str, out_dir: str, args: Args) -> s
 def _write_outputs(
     args: Args,
     markdown_content: str,
-    md_path: str,
-    out_dir: str,
+    md_path: Path,
+    out_dir: Path,
     page_title: Optional[str],
 ) -> None:
     """Write markdown and optional TTS text/audio outputs."""
@@ -610,8 +616,7 @@ def _write_outputs(
         console.print(markdown_content)
         return
 
-    with open(md_path, "w", encoding="utf-8") as f:
-        f.write(markdown_content)
+    md_path.write_text(markdown_content, encoding="utf-8")
     logger.info("Saved markdown to %s", md_path)
     console.print(f"Output saved to: {md_path}")
 
@@ -624,9 +629,8 @@ def _write_outputs(
         tts_text = make_tts_friendly(
             content_for_tts, heading_prefix=args.heading_prefix
         )
-        tts_path = os.path.splitext(md_path)[0] + ".txt"
-        with open(tts_path, "w", encoding="utf-8") as f:
-            f.write(tts_text)
+        tts_path = md_path.with_suffix(".txt")
+        tts_path.write_text(tts_text, encoding="utf-8")
         logger.info("Saved TTS-friendly text to %s", tts_path)
         console.print(f"TTS-friendly copy saved to: {tts_path}")
 
