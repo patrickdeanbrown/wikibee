@@ -57,11 +57,21 @@ pytest tests/test_cli_integration.py
 # Run smoke test
 python scripts/smoke_extract.py
 
-# Run linter
-ruff check .
+# Run automation (lint, typecheck, tests)
+nox
 
-# Run linter with fixes
+# Individual sessions
+nox -s lint
+nox -s typecheck
+nox -s tests-3.10
+
+# Smoke test
+python scripts/smoke_extract.py --skip-search --no-tts-audio
+
+# Optional direct lint/pytest
+ruff check .
 ruff check . --fix
+pytest -q
 
 # Install and run pre-commit hooks
 pre-commit install

@@ -160,6 +160,19 @@ ruff check .
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed development guidelines.
 
+Quick commands:
+
+```bash
+# Install dev dependencies
+pip install -e .[dev]
+
+# Run lint, typecheck, and tests via nox
+nox
+
+# Optional smoke test (manual; requires local TTS server)
+python scripts/smoke_extract.py --skip-search --no-tts-audio
+```
+
 ## Examples and Scripts
 
 The `scripts/` directory contains working examples:

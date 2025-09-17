@@ -113,8 +113,8 @@ pre-commit install
 # Run hooks manually
 pre-commit run --all-files
 
-# Or mirror the CI hook stack with uv (preferred before pushing)
-scripts/run_precommit_checks.sh
+# Or mirror the CI hook stack with nox
+nox -s lint typecheck
 
 # Skip hooks for emergency commits (not recommended)
 git commit --no-verify -m "Emergency fix"
@@ -132,20 +132,15 @@ Configured hooks:
 ### Running Tests
 
 ```bash
-# Quick test run (recommended for development)
+# Preferred: run matrix via nox
+nox -s tests
+
+# Specific interpreter
+nox -s tests-3.10
+
+# Direct pytest (if you control the virtualenv)
 pytest -q
-
-# Verbose output with coverage
-pytest -v --cov=wikibee
-
-# Run specific test file
-pytest tests/test_client.py -v
-
-# Run tests matching pattern
-pytest -k "test_search" -v
-
-# Run with coverage report
-pytest --cov=wikibee --cov-report=html
+pytest -k "test_search"
 ```
 
 ### Test Structure

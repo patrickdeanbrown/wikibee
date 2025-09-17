@@ -37,21 +37,20 @@ The project includes these development tools:
 
 ### Test Commands
 ```bash
-# Run all tests quietly
-pytest -q
+# Run lint, typecheck, and tests on default interpreter
+nox
 
-# Run tests with verbose output and coverage
-pytest -v
+# Lint / pre-commit checks only
+nox -s lint
 
-# Run targeted suites
-pytest tests/test_search.py             # Search service + CLI helpers  
-pytest tests/test_services_output.py    # Output manager behaviour
-pytest tests/test_services_tts.py       # TTS service wrapper
-pytest tests/test_cli_integration.py    # End-to-end CLI (fake TTS client)
-pytest tests/test_config_model.py       # Runtime config validation
+# Type checking only
+nox -s typecheck
 
-# Run smoke test (end-to-end validation)
-python scripts/smoke_extract.py
+# Run pytest suite for a specific interpreter
+nox -s tests-3.8   # also tests-3.9 ... tests-3.13
+
+# Run smoke test manually (not part of CI)
+python scripts/smoke_extract.py --skip-search --no-tts-audio
 
 # Test console script installation
 wikibee --help
@@ -67,7 +66,7 @@ wikibee --help
 ### Coverage Expectations
 - All public functions must have test coverage
 - Error handling paths must be tested
-- CLI argument parsing must be validated
+- CLI/service layers validated through integration tests
 - Mock all external API calls (Wikipedia, TTS server)
 
 ## Linting and formatting
@@ -80,14 +79,8 @@ ruff check .
 # Run linter with automatic fixes
 ruff check . --fix
 
-# Check specific directories
-ruff check wikibee/cli.py wikibee/commands/ wikibee/services/ tests/
-
-# Pre-commit hooks (runs ruff, isort, black)
-pre-commit run --all-files
-
-# CI-equivalent hook runner (uses uv and matches GitHub Actions)
-scripts/run_precommit_checks.sh
+# Run lint & typecheck via nox
+nox -s lint typecheck
 ```
 
 ### Code Style Requirements
@@ -112,10 +105,10 @@ test: add coverage for error handling
 ```
 
 ### Pre-merge Checklist
-- [ ] All tests pass: `pytest -q`
-- [ ] Linting passes: `ruff check .`
-- [ ] Pre-commit hooks pass: `pre-commit run --all-files` *(or run `scripts/run_precommit_checks.sh`)*  
-- [ ] Smoke test passes: `python scripts/smoke_extract.py`
+- [ ] All sessions pass: `nox`
+- [ ] Linting passes: `nox -s lint`
+- [ ] Type checking passes: `nox -s typecheck`
+- [ ] Smoke test passes: `python scripts/smoke_extract.py --skip-search --no-tts-audio`
 - [ ] Type hints added for new functions
 - [ ] Docstrings added for public functions
 - [ ] Tests added for new functionality
