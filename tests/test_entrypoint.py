@@ -9,6 +9,7 @@ def test_cli_runs(monkeypatch):
 
     import wikibee.cli as cli
 
+    monkeypatch.setattr("wikibee.commands.extract.extract_wikipedia_text", fake_extract)
     monkeypatch.setattr(cli, "extract_wikipedia_text", fake_extract)
 
     runner = CliRunner()

@@ -114,23 +114,55 @@ def test_load_config_unreadable_file(tmp_path, monkeypatch, caplog):
 
 def test_merge_configs():
     """Test that configurations are merged correctly."""
-    defaults = {"timeout": 15, "tts_voice": "default_voice"}
+    defaults = {
+        "timeout": 15,
+        "tts_voice": "default_voice",
+        "tts_format": "mp3",
+        "tts_server": "http://localhost",
+        "output_dir": "/tmp/default",
+        "filename": None,
+        "no_save": False,
+        "verbose": False,
+        "lead_only": False,
+        "tts_file": False,
+        "tts_audio": False,
+        "yolo": False,
+        "search_limit": 5,
+        "heading_prefix": None,
+        "tts_normalize": False,
+    }
     config_file = {"timeout": 30, "output_dir": "/tmp/output"}
     cli_args = {"tts_voice": "cli_voice", "output_dir": "/cli/output"}
 
     merged = config.merge_configs(defaults, config_file, cli_args)
 
-    assert merged["timeout"] == 30  # from config_file, overrides default
-    assert merged["tts_voice"] == "cli_voice"  # from cli_args, overrides default
-    assert merged["output_dir"] == "/cli/output"  # from cli_args, overrides config_file
+    assert merged.timeout == 30  # from config_file, overrides default
+    assert merged.tts_voice == "cli_voice"  # from cli_args, overrides default
+    assert merged.output_dir == "/cli/output"  # from cli_args, overrides config_file
 
 
 def test_merge_configs_cli_override_with_default_value():
     """CLI values should override config even if they match the defaults."""
-    defaults = {"tts_format": "mp3"}
+    defaults = {
+        "timeout": 15,
+        "lead_only": False,
+        "tts_voice": "default",
+        "tts_format": "mp3",
+        "tts_server": "http://localhost",
+        "output_dir": "/tmp/out",
+        "filename": None,
+        "no_save": False,
+        "verbose": False,
+        "heading_prefix": None,
+        "tts_file": False,
+        "tts_audio": False,
+        "yolo": False,
+        "search_limit": 5,
+        "tts_normalize": False,
+    }
     config_file = {"tts_format": "wav"}
     cli_args = {"tts_format": "mp3"}
 
     merged = config.merge_configs(defaults, config_file, cli_args)
 
-    assert merged["tts_format"] == "mp3"
+    assert merged.tts_format == "mp3"

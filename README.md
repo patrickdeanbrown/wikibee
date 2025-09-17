@@ -35,6 +35,13 @@ wikibee "https://en.wikipedia.org/wiki/Artificial_intelligence" --tts
 
 That's it! You now have clean markdown and TTS-optimized text files ready for audio conversion.
 
+### Audio Prerequisites
+
+wikibee streams audio through an OpenAI-compatible endpoint. Start a local server
+such as [kokoro](https://github.com/dtlnor/kokoro) on `http://localhost:8880/v1`
+before running `--tts-audio`. Configure alternative hosts with `--tts-server` or
+`WIKIBEE_TTS_SERVER`.
+
 ## Installation
 
 ### Option 1: pipx (Recommended)

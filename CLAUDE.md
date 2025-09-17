@@ -7,7 +7,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 This is a Python tool for extracting and processing Wikipedia articles into TTS-friendly formats. The project uses a modern Python packaging structure:
 
 - **`wikibee/`**: Main package containing the core functionality
-  - `cli.py`: Main CLI logic and Wikipedia extraction functions
+  - `cli.py`: Typer entry point re-exporting commands
+  - `commands/`: Modular Typer commands (`extract.py`, `config.py`)
+  - `services/`: Shared helpers (output management, search, TTS)
   - `client.py`: Wikipedia API client with retry logic and session management
   - `formatting.py`: Text processing and TTS formatting utilities
   - `tts_normalizer.py`: Advanced TTS text normalization (royal names, centuries, Latin abbreviations)
@@ -20,10 +22,11 @@ This is a Python tool for extracting and processing Wikipedia articles into TTS-
 
 The application follows a layered architecture:
 
-1. **CLI Layer** (`cli.py`): Argument parsing, orchestration, and file I/O
-2. **Client Layer** (`client.py`): Wikipedia API interactions
-3. **Processing Layer** (`formatting.py`): Text transformation and TTS optimization
-4. **Audio Layer** (`tts_openai.py`): Optional TTS audio generation
+1. **CLI Layer** (`cli.py`, `commands/`): Argument parsing and orchestration
+2. **Service Layer** (`services/`): Output management, search, and TTS coordination
+3. **Client Layer** (`client.py`): Wikipedia API interactions
+4. **Processing Layer** (`formatting.py`, `tts_normalizer.py`): Text transformation and TTS optimization
+5. **Audio Layer** (`tts_openai.py`): OpenAI-compatible TTS generation
 
 The package exports a clean public API through `__init__.py` while maintaining backward compatibility with the original `extract.py` interface.
 
@@ -49,7 +52,7 @@ pytest -q
 pytest -v
 
 # Run specific test file
-pytest tests/test_extract.py
+pytest tests/test_cli_integration.py
 
 # Run smoke test
 python scripts/smoke_extract.py
@@ -118,11 +121,11 @@ All exceptions inherit from `RuntimeError` and provide meaningful error messages
 
 ## Configuration
 
-- **Ruff**: Line length 88 characters (strictly enforced), linting rules in `pyproject.toml`
-- **Code style**: All lines must be ≤88 characters to pass linting
-- **Pytest**: Configuration in `setup.cfg`
-- **Console script**: `wikibee` entry point defined in `pyproject.toml`
-- **TTS defaults**: Kokoro voice `af_sky+af_bella`, MP3 format, localhost:8880 server
+- **RuntimeConfig**: `wikibee.config.RuntimeConfig` validates CLI/config values at startup.
+- **Ruff**: Line length 88 characters (strictly enforced), linting rules in `pyproject.toml`.
+- **Pytest**: Configuration supplied via `pyproject.toml` (`tool.pytest.ini_options`).
+- **Console script**: `wikibee` entry point defined in `pyproject.toml`.
+- **TTS defaults**: Kokoro voice `af_sky+af_bella`, MP3 format, localhost:8880 server.
 
 ## API Integration Patterns
 
@@ -147,8 +150,9 @@ tts_client = TTSOpenAIClient(base_url="http://localhost:8880/v1", voice="af_sky+
 ## Testing Strategy
 
 ### Test Categories
-- **Unit tests**: Individual function testing (`test_extract.py`, `test_tts_normalizer.py`)
-- **Integration tests**: API interaction testing (`test_search.py`, `test_tts_openai.py`)  
+- **Unit tests**: Service and helper coverage (`tests/test_services_*.py`, `test_tts_normalizer.py`)
+- **Integration tests**: API interaction testing (`test_search.py`, `test_tts_openai.py`)
+- **CLI integration**: Typer end-to-end run (`test_cli_integration.py`)
 - **Package tests**: Import and entrypoint verification (`test_package_exports.py`, `test_entrypoint.py`)
 - **Smoke tests**: End-to-end validation (`scripts/smoke_extract.py`)
 

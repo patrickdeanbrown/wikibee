@@ -1,5 +1,5 @@
 from pathlib import Path
-from unittest.mock import MagicMock
+from typing import Optional
 
 from typer.testing import CliRunner
 
@@ -8,7 +8,8 @@ try:  # Python 3.11+
 except Exception:  # Python < 3.11
     import tomli  # type: ignore[no-redef]
 
-from wikibee import cli
+from wikibee import cli, config
+from wikibee.commands import extract
 
 
 def test_config_precedence(monkeypatch, tmp_path):
@@ -39,13 +40,55 @@ search_limit = 6
     # 2. Patch get_config_path to use the temporary file
     monkeypatch.setattr(cli.config, "get_config_path", lambda: config_path)
 
-    # 3. Patch a function at the end of the chain to inspect the final `args`
-    mock_write_outputs = MagicMock()
-    monkeypatch.setattr(cli, "_write_outputs", mock_write_outputs)
+    # 3. Capture the Args object built from config defaults
+    captured_runtime: dict[str, config.RuntimeConfig] = {}
+
+    original_merge = config.merge_configs
+
+    def capture_merge(defaults, cfg, cli_args):
+        runtime = original_merge(defaults, cfg, cli_args)
+        captured_runtime["value"] = runtime
+        return runtime
+
+    monkeypatch.setattr(config, "merge_configs", capture_merge)
+
+    # Patch output manager to avoid filesystem writes
+    from wikibee.services.output import OutputPaths
+
+    class DummyManager:
+        def __init__(self, base_dir: str, audio_format: str) -> None:
+            self.base_dir = Path(base_dir)
+            self.paths = OutputPaths(
+                markdown_path=self.base_dir / "dummy.md",
+                tts_path=self.base_dir / "dummy.txt",
+                audio_path=self.base_dir / f"dummy.{audio_format}",
+            )
+
+        def prepare_paths(
+            self, page_title: str, filename: Optional[str]
+        ) -> OutputPaths:
+            return self.paths
+
+        def write_markdown(self, paths: OutputPaths, content: str) -> None:
+            pass
+
+        def write_tts_copy(self, *args, **kwargs) -> None:
+            pass
+
+    monkeypatch.setattr(extract, "OutputManager", DummyManager)
+
+    class DummyTTSService:
+        def __init__(self, *args, **kwargs) -> None:
+            pass
+
+        def synthesize_audio(self, **kwargs) -> str:
+            return "dummy-audio.mp3"
+
+    monkeypatch.setattr(extract, "TTSService", DummyTTSService)
 
     # Also patch extract_wikipedia_text to avoid network calls
     monkeypatch.setattr(
-        cli,
+        extract,
         "extract_wikipedia_text",
         lambda url, **kwargs: ("Fake content.", "Fake Title"),
     )
@@ -68,33 +111,31 @@ search_limit = 6
     assert result.exit_code == 0
 
     # 5. Assert that _write_outputs was called with the correct, merged config
-    assert mock_write_outputs.call_count == 1
-    call_args, call_kwargs = mock_write_outputs.call_args
-    final_args = call_args[0]  # The `args` object is the first positional argument
+    runtime = captured_runtime["value"]
 
     # CLI override: timeout=30 should win over config file's 20
-    assert final_args.timeout == 30
+    assert runtime.timeout == 30
 
     # Config file value: tts_voice="config-voice" should be used
-    assert final_args.tts_voice == "config-voice"
+    assert runtime.tts_voice == "config-voice"
 
     # Default value: lead_only=False should be used
-    assert final_args.lead_only is False
+    assert runtime.lead_only is False
 
     # Config-driven verbosity should be respected
-    assert final_args.verbose is True
+    assert runtime.verbose is True
 
     # CLI override should win for search_limit
-    assert final_args.search_limit == 8
+    assert runtime.search_limit == 8
 
     # Config should enable yolo mode and normalization
-    assert final_args.yolo is True
-    assert final_args.tts_normalize is True
+    assert runtime.yolo is True
+    assert runtime.tts_normalize is True
 
     # Config should enable TTS outputs and no-save mode
-    assert final_args.tts_file is True
-    assert final_args.tts_audio is True
-    assert final_args.no_save is True
+    assert runtime.tts_file is True
+    assert runtime.tts_audio is True
+    assert runtime.no_save is True
 
 
 def test_config_init(monkeypatch, tmp_path):

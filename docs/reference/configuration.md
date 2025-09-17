@@ -5,6 +5,10 @@ The wikibee CLI reads optional user settings from
 defaults and provide baseline values for each run. CLI flags always take
 precedence over the config file, so ad-hoc changes still work as expected.
 
+All configuration is validated when the CLI boots. Invalid values (for example
+`search_limit = "ten"` or `search_limit = 0`) raise a clear error before any
+network calls occur. This keeps behaviour predictable across environments.
+
 ## Creating the config file
 
 - Run `wikibee config init` to generate a starter file (use `--force` to
@@ -38,6 +42,24 @@ search_limit = 10
 ```
 
 ## Settings reference
+
+| Key             | Type    | Description                                    |
+|-----------------|---------|------------------------------------------------|
+| `timeout`       | int     | Request timeout in seconds                     |
+| `lead_only`     | bool    | Fetch only lead section                        |
+| `output_dir`    | str     | Default directory for outputs                  |
+| `filename`      | str     | Override base filename                         |
+| `tts_voice`     | str     | Default TTS voice identifier                   |
+| `tts_format`    | str     | Audio format (`mp3`, `wav`, …)                 |
+| `tts_server`    | str     | OpenAI-compatible TTS endpoint                 |
+| `tts_file`      | bool    | Write TTS-friendly text                        |
+| `tts_audio`     | bool    | Produce audio output                           |
+| `heading_prefix`| str     | Heading prefix for spoken sections             |
+| `tts_normalize` | bool    | Enable number/name normalization               |
+| `search_limit`  | int     | Maximum search results                         |
+| `yolo`          | bool    | Auto-select first search result                |
+| `no_save`       | bool    | Print to stdout without creating files         |
+| `verbose`       | bool    | Enable debug logging                           |
 
 ### `[general]`
 

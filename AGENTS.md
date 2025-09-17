@@ -43,12 +43,12 @@ pytest -q
 # Run tests with verbose output and coverage
 pytest -v
 
-# Run specific test categories
-pytest tests/test_extract.py          # Core extraction logic
-pytest tests/test_search.py           # Search functionality  
-pytest tests/test_tts_normalizer.py   # Text normalization
-pytest tests/test_tts_openai.py       # TTS integration
-pytest tests/test_package_exports.py  # Public API verification
+# Run targeted suites
+pytest tests/test_search.py             # Search service + CLI helpers  
+pytest tests/test_services_output.py    # Output manager behaviour
+pytest tests/test_services_tts.py       # TTS service wrapper
+pytest tests/test_cli_integration.py    # End-to-end CLI (fake TTS client)
+pytest tests/test_config_model.py       # Runtime config validation
 
 # Run smoke test (end-to-end validation)
 python scripts/smoke_extract.py
@@ -58,10 +58,11 @@ wikibee --help
 ```
 
 ### Test Patterns
-- **Mock usage**: All tests use `requests-mock` for Wikipedia API calls
-- **Error testing**: Each exception type has dedicated test cases
-- **Integration testing**: Tests cover CLI, API client, and TTS functionality
-- **Backward compatibility**: Tests verify legacy `extract.py` interface
+- **Service-first**: Unit tests target the `wikibee.services.*` helpers so CLI and smoke tests share the same code paths.
+- **Mock usage**: Use `requests-mock` for Wikipedia calls and fake OpenAI clients for audio.
+- **Error testing**: Each exception type has dedicated test cases.
+- **Integration testing**: `tests/test_cli_integration.py` and `scripts/smoke_extract.py` exercise the Typer CLI end-to-end.
+- **Backward compatibility**: `extract.py` shim remains for legacy imports.
 
 ### Coverage Expectations
 - All public functions must have test coverage
@@ -79,8 +80,8 @@ ruff check .
 # Run linter with automatic fixes
 ruff check . --fix
 
-# Check specific files
-ruff check wikibee/cli.py tests/
+# Check specific directories
+ruff check wikibee/cli.py wikibee/commands/ wikibee/services/ tests/
 
 # Pre-commit hooks (runs ruff, isort, black)
 pre-commit run --all-files
@@ -150,21 +151,19 @@ test: add coverage for error handling
 - Maintain backward compatibility with existing text processing
 
 ### CLI Design Principles
-- Use numbered menu selection (not arrow keys) for cross-platform compatibility
-- Provide colored output using Rich library color codes
-- Include progress indicators for long operations
-- Offer both interactive and automated modes (--yolo flag)
-- Maintain clean separation between CLI and core functionality
+- Typer app lives in `wikibee/cli.py` and re-exports modular commands from `wikibee/commands/`.
+- `wikibee.commands.extract` handles orchestration using shared services (search/output/tts).
+- Numbered menu selection (no arrow keys) for cross-platform compatibility.
+- Rich library colors for feedback, `--yolo` for automation, and smoke/integration tests validate flows.
 
 ### File I/O Patterns
-- Use `pathlib` over `os.path` for file operations
-- Sanitize filenames using `sanitize_filename()` function
-- Support custom output directories with `--output` flag
-- Handle file permission errors gracefully
-- Provide clear error messages for I/O failures
+- Use `OutputManager` (`wikibee.services.output`) for all filesystem writes.
+- `sanitize_filename()` (re-exported from `commands.extract`) normalizes article titles.
+- Support custom output directories with `--output` and config defaults.
+- Handle file permission errors gracefully and respect directory boundaries.
 
 ### Backward Compatibility
-- Maintain `extract.py` shim for legacy imports
-- Keep public API stable in `wikibee/__init__.py`
-- Test backward compatibility in `test_package_exports.py`
-- Document any breaking changes in `CHANGELOG.md`
+- Maintain `extract.py` shim for legacy imports.
+- Keep public API stable in `wikibee/__init__.py`.
+- Integration tests ensure command re-exports (e.g., `_handle_search`) remain accessible.
+- Document any breaking changes in `CHANGELOG.md`.

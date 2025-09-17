@@ -80,7 +80,9 @@ The `[dev]` extra includes:
 wikibee/
 ├── wikibee/           # Main package
 │   ├── __init__.py    # Package exports
-│   ├── cli.py         # Command-line interface
+│   ├── cli.py         # Command-line interface (Typer entry)
+│   ├── commands/      # Typer command modules (extract, config)
+│   ├── services/      # Shared services (output, search, TTS)
 │   ├── client.py      # Wikipedia API client
 │   ├── formatting.py  # Text processing
 │   └── tts_*.py       # TTS-related modules
@@ -150,12 +152,13 @@ pytest --cov=wikibee --cov-report=html
 
 ```
 tests/
-├── test_cli.py           # CLI interface tests
-├── test_client.py        # Wikipedia client tests  
-├── test_formatting.py    # Text processing tests
-├── test_extract.py       # Legacy extract.py tests
-├── test_tts_*.py        # TTS-related tests
-└── conftest.py          # Test configuration and fixtures
+├── test_cli.py              # CLI interface unit tests
+├── test_cli_integration.py  # End-to-end CLI run (fake TTS)
+├── test_client.py           # Wikipedia client tests  
+├── test_formatting.py       # Text processing tests
+├── test_services_*.py       # Service layer tests
+├── test_tts_*.py           # TTS-related tests
+└── conftest.py             # Test configuration and fixtures
 ```
 
 ### Writing Tests
@@ -209,6 +212,8 @@ ruff check . --fix
 
 # Check specific file
 ruff check wikibee/cli.py
+ruff check wikibee/commands/
+ruff check wikibee/services/
 ```
 
 ### Type Checking
