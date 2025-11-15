@@ -543,4 +543,4 @@ if success:
 
 ---
 
-**Navigation**: [Documentation Home](../README.md) | [Integration Guide](integration.md) | [API Reference](../reference/api-reference.md) | [CLI Reference](../reference/cli-reference.md)
+**Navigation**: [Documentation Home](../README.md) | [Quick Start](../quickstart.md) | [API Tutorial](../tutorial/api-usage.md) | [CLI Reference](../reference/cli-reference.md)

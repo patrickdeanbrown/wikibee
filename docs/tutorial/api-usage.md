@@ -43,25 +43,28 @@ from wikibee import (
 
 # Optional: Access to internal modules
 from wikibee.client import WikiClient
-from wikibee.formatting import write_text_file
 ```
 
 ## Basic Article Extraction
 
-### Extract by Search Term
+### Search and Extract
 
 ```python
 from wikibee import extract_wikipedia_text
+from wikibee.client import WikiClient
 
-# Extract an article by search term
-text, title = extract_wikipedia_text("Albert Einstein")
+client = WikiClient()
+results = client.search_articles("Albert Einstein", limit=1)
 
-if text:
-    print(f"Title: {title}")
-    print(f"Content length: {len(text)} characters")
-    print(f"First 200 chars: {text[:200]}...")
-else:
-    print("Failed to extract article")
+if not results:
+    raise SystemExit("No results found")
+
+url = results[0]["url"]
+text, title = extract_wikipedia_text(url)
+
+print(f"Title: {title}")
+print(f"Content length: {len(text)} characters")
+print(f"First 200 chars: {text[:200]}...")
 ```
 
 ### Extract by Direct URL
@@ -94,12 +97,12 @@ from wikibee.client import WikiClient
 client = WikiClient()
 
 # Search for articles
-search_results = client.search("quantum physics", limit=5)
+search_results = client.search_articles("quantum physics", limit=5)
 
 print("Search results:")
 for i, result in enumerate(search_results, 1):
     print(f"{i}. {result['title']}")
-    print(f"   {result['snippet']}")
+    print(f"   {result['description']}")
     print(f"   URL: {result['url']}")
 ```
 
@@ -110,7 +113,7 @@ from wikibee.client import WikiClient
 
 def find_best_match(search_term, max_results=10):
     client = WikiClient()
-    results = client.search(search_term, limit=max_results)
+    results = client.search_articles(search_term, limit=max_results)
     
     if not results:
         return None, None
@@ -543,18 +546,29 @@ while True:
 ### Memory Management
 
 ```python
-# For large batch operations
+from wikibee.client import WikiClient
+
+client = WikiClient()
+
+def resolve_topic_url(topic: str) -> str | None:
+    results = client.search_articles(topic, limit=1)
+    return results[0]["url"] if results else None
+
+
 def process_large_batch(topics):
     """Process many articles without memory buildup."""
-    
+
     for topic in topics:
-        # Process one at a time
-        text, title = extract_wikipedia_text(topic)
-        
+        url = resolve_topic_url(topic)
+        if not url:
+            continue
+
+        text, title = extract_wikipedia_text(url)
+
         if text:
             # Process immediately and discard
             process_and_save(text, title)
-            
+
         # Clear variables
         text = title = None
 ```
@@ -562,37 +576,50 @@ def process_large_batch(topics):
 ### Error Recovery
 
 ```python
+from wikibee.client import WikiClient
+
+client = WikiClient()
+
+
 def robust_extraction(search_term, max_retries=3, fallback_to_lead=True):
     """Extract with fallback strategies."""
-    
+
+    def _resolve_url() -> str | None:
+        results = client.search_articles(search_term, limit=1)
+        return results[0]["url"] if results else None
+
+    url = _resolve_url()
+    if not url:
+        return None, None, "failed"
+
     # Try full article first
-    for attempt in range(max_retries):
+    for _ in range(max_retries):
         try:
-            text, title = extract_wikipedia_text(search_term, timeout=30)
+            text, title = extract_wikipedia_text(url, timeout=30)
             if text:
-                return text, title, 'full'
-        except:
+                return text, title, "full"
+        except Exception:
             continue
-    
+
     # Fallback to lead section
     if fallback_to_lead:
         try:
-            text, title = extract_wikipedia_text(search_term, lead_only=True, timeout=15)
+            text, title = extract_wikipedia_text(url, lead_only=True, timeout=15)
             if text:
-                return text, title, 'lead'
-        except:
+                return text, title, "lead"
+        except Exception:
             pass
-    
-    return None, None, 'failed'
+
+    return None, None, "failed"
 ```
 
 ## Next Steps
 
-- **[Advanced CLI Tutorial](advanced-cli.md)** - Command-line power features
-- **[TTS Server Setup](tts-setup.md)** - Audio generation setup  
-- **[API Reference](../reference/api-reference.md)** - Complete function documentation
-- **[Integration Guide](../guides/integration.md)** - More integration patterns
+- **[Basic Usage Tutorial](basic-usage.md)** - Review CLI-first workflows
+- **[CLI Reference](../reference/cli-reference.md)** - Complete command documentation
+- **[Configuration Guide](../reference/configuration.md)** - Customize defaults and TTS options
+- **[Examples Guide](../guides/examples.md)** - Real-world automation scripts
 
 ---
 
-**Navigation**: [Documentation Home](../README.md) | [Basic Usage](basic-usage.md) | [Advanced CLI](advanced-cli.md) | [API Reference](../reference/api-reference.md)
+**Navigation**: [Documentation Home](../README.md) | [Basic Usage](basic-usage.md) | [CLI Reference](../reference/cli-reference.md)

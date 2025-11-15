@@ -250,8 +250,8 @@ Handle slow or unreliable connections:
 # Increase timeout (default: 15 seconds)
 wikibee "Large Article" --timeout 30
 
-# Retry failed requests
-wikibee "Topic" --retries 3
+# Retry after a short pause if the API was busy
+sleep 5 && wikibee "Topic"
 ```
 
 ### No Search Results
@@ -339,12 +339,12 @@ The tool will:
 
 ## Next Steps
 
-Now that you understand basic usage, explore these advanced topics:
+Now that you understand basic usage, explore these next steps:
 
-- **[Advanced CLI Features](advanced-cli.md)** - Power user techniques
 - **[Python API Usage](api-usage.md)** - Programmatic access  
-- **[TTS Server Setup](tts-setup.md)** - Audio generation
 - **[CLI Reference](../reference/cli-reference.md)** - Complete command documentation
+- **[Configuration Guide](../reference/configuration.md)** - Customize defaults
+- **[Examples Guide](../guides/examples.md)** - Real-world workflows
 
 ## Quick Reference
 
@@ -365,9 +365,9 @@ wikibee "term" --tts --heading-prefix "Section:"  # Custom headings
 
 # Network options
 wikibee "term" --timeout 30              # Increase timeout
-wikibee "term" --retries 3              # Retry failed requests
+sleep 5 && wikibee "term"               # Retry after a short pause
 ```
 
 ---
 
-**Navigation**: [Documentation Home](../README.md) | [Quick Start](../quickstart.md) | [Advanced CLI](advanced-cli.md) | [API Usage](api-usage.md)
+**Navigation**: [Documentation Home](../README.md) | [Quick Start](../quickstart.md) | [API Usage](api-usage.md)

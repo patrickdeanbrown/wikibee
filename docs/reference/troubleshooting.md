@@ -159,9 +159,6 @@ wikibee "Alternative Page Name"
 # Increase timeout
 wikibee "Large Article" --timeout 30
 
-# Add retries
-wikibee "Article" --timeout 30 --retries 5
-
 # Try lead section only (faster)
 wikibee "Article" --lead-only
 
@@ -285,8 +282,8 @@ curl http://localhost:8880/health
 # Use TTS text without audio generation
 wikibee "Topic" --tts  # Skip --audio flag
 
-# Configure TTS server URL
-export WIKIBEE_TTS_SERVER="http://your-server:port"
+# Configure TTS server URL via CLI flag or config file
+wikibee "Topic" --audio --tts-server "http://your-server:port"
 ```
 
 ### Audio Generation Fails
@@ -411,7 +408,7 @@ pipx install wikibee
 
 **Solution**:
 ```bash
-wikibee "Topic" --timeout 30 --retries 3
+wikibee "Topic" --timeout 30
 ```
 
 ### "json.decoder.JSONDecodeError"
@@ -420,8 +417,8 @@ wikibee "Topic" --timeout 30 --retries 3
 
 **Solution**:
 ```bash
-# Try again (temporary API issue)
-wikibee "Topic" --retries 3
+# Try again after a short pause (temporary API issue)
+wikibee "Topic"
 
 # Try different search term
 wikibee "Alternative Topic"
@@ -444,7 +441,7 @@ wikibee "Topic"
 
 - **[Quick Start](../quickstart.md)** - Basic usage
 - **[CLI Reference](cli-reference.md)** - Complete command documentation
-- **[API Reference](api-reference.md)** - Python API documentation
+- **[API Tutorial](../tutorial/api-usage.md)** - Programmatic access
 
 ### Community Support
 
@@ -481,4 +478,4 @@ For new features:
 
 ---
 
-**Navigation**: [Documentation Home](../README.md) | [CLI Reference](cli-reference.md) | [API Reference](api-reference.md) | [Quick Start](../quickstart.md)
+**Navigation**: [Documentation Home](../README.md) | [CLI Reference](cli-reference.md) | [API Tutorial](../tutorial/api-usage.md) | [Quick Start](../quickstart.md)

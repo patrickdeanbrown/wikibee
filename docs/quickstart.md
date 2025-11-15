@@ -132,8 +132,8 @@ wikibee "topic" --timeout 30
 
 - **Learn more features**: [Basic Usage Tutorial](tutorial/basic-usage.md)
 - **Python integration**: [API Tutorial](tutorial/api-usage.md)
-- **Audio setup**: [TTS Server Setup](tutorial/tts-setup.md)
-- **Advanced techniques**: [Advanced CLI Tutorial](tutorial/advanced-cli.md)
+- **Customize defaults**: [Configuration Guide](reference/configuration.md)
+- **Explore workflows**: [Examples Guide](guides/examples.md)
 
 ## Quick Reference
 
