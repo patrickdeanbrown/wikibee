@@ -170,13 +170,6 @@ wikibee "Very Long Article" --timeout 30
 wikibee "Quick Test" --timeout 5
 ```
 
-### --retries N
-Number of retry attempts for failed requests (default: 3).
-
-```bash
-wikibee "Unreliable Connection Test" --retries 5
-```
-
 ## Audio Generation Options
 
 ### --audio
@@ -268,32 +261,6 @@ else
 fi
 ```
 
-## Environment Variables
-
-### WIKIBEE_OUTPUT_DIR
-Default output directory.
-
-```bash
-export WIKIBEE_OUTPUT_DIR="/home/user/wikipedia"
-wikibee "Topic"  # Saves to /home/user/wikipedia/
-```
-
-### WIKIBEE_TTS_SERVER
-TTS server URL for audio generation.
-
-```bash
-export WIKIBEE_TTS_SERVER="http://localhost:8880"
-wikibee "Topic" --audio
-```
-
-### WIKIBEE_TIMEOUT
-Default timeout in seconds.
-
-```bash
-export WIKIBEE_TIMEOUT=30
-wikibee "Topic"  # Uses 30-second timeout
-```
-
 ## Configuration File
 
 wikibee looks for configuration in `~/.config/wikibee/config.toml`:
@@ -369,7 +336,7 @@ done
 - Process articles sequentially rather than in parallel
 
 ### Network Efficiency
-- Increase `--retries` for unreliable connections
+- Retry the command after a short pause on flaky connections
 - Use longer `--timeout` for large articles
 - Test with `--no-save --verbose` before bulk operations
 
@@ -392,7 +359,7 @@ pipx ensurepath
 **Network timeouts**
 ```bash
 # Increase timeout
-wikibee "Topic" --timeout 30 --retries 5
+wikibee "Topic" --timeout 30
 ```
 
 **No search results**
@@ -411,4 +378,4 @@ For more detailed troubleshooting, see the [Troubleshooting Guide](troubleshooti
 
 ---
 
-**Navigation**: [Documentation Home](../README.md) | [Quick Start](../quickstart.md) | [API Reference](api-reference.md) | [Troubleshooting](troubleshooting.md)
+**Navigation**: [Documentation Home](../README.md) | [Quick Start](../quickstart.md) | [Configuration](configuration.md) | [Troubleshooting](troubleshooting.md)

@@ -39,8 +39,8 @@ That's it! You now have clean markdown and TTS-optimized text files ready for au
 
 wikibee streams audio through an OpenAI-compatible endpoint. Start a local server
 such as [kokoro](https://github.com/dtlnor/kokoro) on `http://localhost:8880/v1`
-before running `--tts-audio`. Configure alternative hosts with `--tts-server` or
-`WIKIBEE_TTS_SERVER`.
+before running `--tts-audio`. Configure alternative hosts with the `--tts-server`
+flag or via the generated `config.toml`.
 
 ## Installation
 
@@ -136,9 +136,10 @@ wikibee "evolution" --tts --output biology/
 ## Documentation
 
 - **[Quick Start Guide](docs/quickstart.md)** - Get up and running in 5 minutes
-- **[Complete Tutorial](docs/tutorial/)** - Comprehensive usage guide
+- **[Basic Usage Tutorial](docs/tutorial/basic-usage.md)** - Learn the fundamentals
+- **[Python API Tutorial](docs/tutorial/api-usage.md)** - Programmatic access
 - **[CLI Reference](docs/reference/cli-reference.md)** - All commands and options
-- **[API Reference](docs/reference/api-reference.md)** - Python API documentation
+- **[Configuration Guide](docs/reference/configuration.md)** - Settings and overrides
 - **[Troubleshooting](docs/reference/troubleshooting.md)** - Common issues and solutions
 
 ## Development

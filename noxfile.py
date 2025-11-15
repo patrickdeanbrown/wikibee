@@ -37,7 +37,7 @@ def typecheck(session: nox.Session) -> None:
 def tests(session: nox.Session) -> None:
     """Run the pytest suite on all supported Python versions."""
 
-    session.install("pip", "-U", "pip")
+    session.run("python", "-m", "pip", "install", "--upgrade", "pip")
     session.install(".[dev]")
     session.run("python", "wikibee/__main__.py", "--help")
     session.run("pytest", "-q")
