@@ -66,6 +66,19 @@ wikibee "quantum physics" --yolo
 - Running automated scripts  
 - The first result is usually correct
 
+### --pick
+Interactively select which sections of the article to extract.
+
+```bash
+wikibee "Rome" --pick
+```
+
+**Features:**
+- Shows a numbered list of all sections
+- Supports selecting multiple sections (e.g., `1,3,5`)
+- Supports ranges (e.g., `1-4`)
+- Useful for extracting only specific parts of large articles
+
 ### --search-limit N
 Control how many search results to show (default: 10).
 
