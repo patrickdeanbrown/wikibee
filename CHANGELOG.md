@@ -8,12 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Interactive Section Picker**: New `--pick` flag allows users to interactively select specific sections of an article to extract.
 - Comprehensive documentation suite with tutorials and guides
 - MIT license
 - Contributor guidelines and code of conduct
 - Complete API reference documentation
-
-## [Unreleased]
 
 ## [0.1.2] - 2025-11-19
 
@@ -30,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Documentation consistency across all guides.
+
+## [0.1.0] - 2024-12-XX
 
 ### Added
 - Complete project rebrand from wiki_extractor to wikibee
