@@ -150,7 +150,6 @@ def split_wikitext_sections(text: str) -> list[tuple[str, str]]:
     current_body: list[str] = []
 
     # Regex to match == Header == styles
-    # Matches start of line, 2+ equals, whitespace, title, whitespace, 2+ equals, end of line
     heading_re = re.compile(r"^\s*={2,}\s*(?P<title>.+?)\s*={2,}\s*$")
 
     for line in text.splitlines():

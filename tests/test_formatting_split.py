@@ -1,5 +1,5 @@
-import pytest
-from wikibee.formatting import split_wikitext_sections, convert_wikitext_headers
+from wikibee.formatting import convert_wikitext_headers, split_wikitext_sections
+
 
 def test_split_wikitext_sections_basic():
     text = """Introduction text.
@@ -14,6 +14,7 @@ Content 2.
     assert sections[1] == ("Section 1", "Content 1.")
     assert sections[2] == ("Section 2", "Content 2.")
 
+
 def test_split_wikitext_sections_no_intro():
     text = """== Section 1 ==
 Content 1.
@@ -21,6 +22,7 @@ Content 1.
     sections = split_wikitext_sections(text)
     assert len(sections) == 1
     assert sections[0] == ("Section 1", "Content 1.")
+
 
 def test_convert_wikitext_headers():
     text = """Intro.
