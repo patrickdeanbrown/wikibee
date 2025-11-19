@@ -4,7 +4,7 @@ import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Final, List, Optional, Tuple
+from typing import Any, Dict, Final, List, Optional, Tuple
 
 import click
 import requests
@@ -294,6 +294,15 @@ def extract(
     logger.info("Saved markdown to %s", paths.markdown_path)
     console.print(f"Output saved to: {paths.markdown_path}")
 
+    _save_outputs(args, output_manager, paths, markdown_content)
+
+
+def _save_outputs(
+    args: Args,
+    output_manager: OutputManager,
+    paths: Any,
+    markdown_content: str,
+) -> None:
     if args.tts_file:
         output_manager.write_tts_copy(
             paths,
@@ -395,69 +404,83 @@ def _interactive_pick_sections(text: str) -> str:
         return text
 
     console.print(f"\n[bold blue]Found {len(sections)} sections:[/]\n")
-    
+
     # Print sections with indices
     for i, (title, _) in enumerate(sections, 1):
         console.print(f"[bold]{i}.[/] {title}")
 
-    console.print("\n[dim]Enter numbers separated by commas (e.g. 1,3,5) or ranges (e.g. 1-4).[/]")
+    console.print(
+        "\n[dim]Enter numbers separated by commas (e.g. 1,3,5) or ranges (e.g. 1-4).[/]"
+    )
     console.print("[dim]Enter 'all' to select all, or 'q' to quit.[/]")
 
     while True:
         try:
             choice = console.input("[yellow]Selection: [/]").strip().lower()
-            
+
             if choice == "q":
                 return ""
-            
+
             if choice == "all" or choice == "":
                 return text
 
-            selected_indices = set()
-            parts = choice.split(",")
-            
-            for part in parts:
-                part = part.strip()
-                if "-" in part:
-                    start, end = map(int, part.split("-"))
-                    selected_indices.update(range(start, end + 1))
-                else:
-                    selected_indices.add(int(part))
+            selected_indices = _parse_selection_input(choice)
 
             # Validate indices
-            valid_indices = sorted([i for i in selected_indices if 1 <= i <= len(sections)])
-            
+            valid_indices = sorted(
+                [i for i in selected_indices if 1 <= i <= len(sections)]
+            )
+
             if not valid_indices:
                 console.print("[red]No valid sections selected. Try again.[/]")
                 continue
 
             console.print(f"[green]Selected {len(valid_indices)} sections.[/]")
-            
-            # Reconstruct text
-            # We wrap titles in == == to preserve WikiText structure for subsequent processing
-            picked_content = []
-            for i in valid_indices:
-                title, body = sections[i-1]
-                # If it's the Introduction (usually first), it might not have had a header originally,
-                # but split_wikitext_sections assigns "Introduction".
-                # If we add == Introduction ==, it becomes a header.
-                # Standard Wikipedia doesn't have an "Introduction" header.
-                # But split_wikitext_sections handles the first chunk as "Introduction".
-                # If we reconstruct, we should probably check if it was implicit.
-                # However, for simplicity, let's just append the body for Intro, and headers for others?
-                # split_wikitext_sections returns (heading, body).
-                
-                if i == 1 and title == "Introduction":
-                     picked_content.append(body)
-                else:
-                     picked_content.append(f"== {title} ==\n{body}")
 
-            return "\n\n".join(picked_content)
+            return _reconstruct_picked_sections(sections, valid_indices)
 
         except ValueError:
-            console.print("[red]Invalid input. Please use numbers, ranges (1-3), or 'all'.[/]")
+            console.print(
+                "[red]Invalid input. Please use numbers, ranges (1-3), or 'all'.[/]"
+            )
         except KeyboardInterrupt:
             return ""
+
+
+def _parse_selection_input(choice: str) -> set[int]:
+    selected_indices: set[int] = set()
+    parts = choice.split(",")
+
+    for part in parts:
+        part = part.strip()
+        if "-" in part:
+            start, end = map(int, part.split("-"))
+            selected_indices.update(range(start, end + 1))
+        else:
+            selected_indices.add(int(part))
+    return selected_indices
+
+
+def _reconstruct_picked_sections(
+    sections: list[tuple[str, str]], valid_indices: list[int]
+) -> str:
+    # Reconstruct text
+    # We wrap titles in == == to preserve WikiText structure for subsequent processing
+    picked_content = []
+    for i in valid_indices:
+        title, body = sections[i - 1]
+        # If it's the Introduction (usually first), it might not have had a header
+        # originally, but split_wikitext_sections assigns "Introduction".
+        # If we add == Introduction ==, it becomes a header.
+        # Standard Wikipedia doesn't have an "Introduction" header.
+        # But split_wikitext_sections handles the first chunk as "Introduction".
+
+        if i == 1 and title == "Introduction":
+            picked_content.append(body)
+        else:
+            picked_content.append(f"== {title} ==\n{body}")
+
+    return "\n\n".join(picked_content)
 
 
 def _show_search_menu(results: List[SearchResult], search_term: str) -> Optional[str]:
