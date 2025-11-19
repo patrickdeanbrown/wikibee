@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-from __future__ import annotations
-
 import shutil
 import subprocess
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional, cast
 
 from mutagen.mp3 import MP3
 
@@ -160,7 +158,11 @@ class TTSService:
                     timeout=self.timeout,
                 )
                 try:
-                    info = MP3(dest)
+                    info = cast(Any, MP3(dest))
+                    if info.info is None:
+                        raise TTSClientError(
+                            f"Unable to read audio duration for {dest}"
+                        )
                     chapter_lengths.append(float(info.info.length))
                 except Exception as exc:  # pragma: no cover - defensive
                     raise TTSClientError(

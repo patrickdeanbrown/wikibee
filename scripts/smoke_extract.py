@@ -81,8 +81,8 @@ def main() -> int:
     )
     parser.add_argument(
         "--tts-format",
-        default="mp3",
-        help="Audio format to request from the TTS engine",
+        default="m4b",
+        help="Audio format to request from the TTS engine (m4b requires ffmpeg)",
     )
     args = parser.parse_args()
 
