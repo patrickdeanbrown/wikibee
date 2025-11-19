@@ -1,4 +1,4 @@
-# Wikibee AGENTS.md
+# GEMINI.md
 
 ## Critical Rules
 1. **Always use `.venv`**: All python commands must use the virtual environment (e.g., `.venv/bin/python`, `.venv/bin/pip`).
