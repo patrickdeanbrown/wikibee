@@ -192,6 +192,33 @@ Specify TTS voice (server-dependent).
 wikibee "Article" --audio --tts-voice "af_sky+af_bella"
 ```
 
+### --tts-format FORMAT
+Specify audio output format (default: mp3).
+Supported formats: `mp3`, `wav`, `m4b`, etc.
+
+**Special Feature**: When using `m4b`, wikibee automatically creates chapters from Wikipedia section headers.
+
+```bash
+wikibee "Long Article" --audio --tts-format m4b
+```
+
+### --tts-normalize
+Apply advanced text normalization to improve pronunciation (e.g., expanding abbreviations, fixing spacing).
+
+```bash
+wikibee "Technical Article" --audio --tts-normalize
+```
+
+## Configuration Management
+
+### config init
+Initialize a default configuration file at `~/.config/wikibee/config.toml`.
+
+```bash
+wikibee config init
+wikibee config init --force  # Overwrite existing config
+```
+
 ## Example Commands
 
 ### Basic Usage

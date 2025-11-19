@@ -100,6 +100,27 @@ wikibee "World War II" --tts --heading-prefix "Section:"
 wikibee "Mozart" --tts --output music/ --filename mozart_biography
 ```
 
+### Generate Audio (Requires TTS Server)
+```bash
+# Generate audio using local TTS server
+wikibee "Ancient Rome" --audio
+
+# Generate M4B audiobook with chapters (from section headers)
+wikibee "History of Rome" --audio --tts-format m4b
+
+# Use a specific voice and normalize text for better pronunciation
+wikibee "Quantum Mechanics" --audio --tts-voice "af_sky" --tts-normalize
+```
+
+### Configuration
+```bash
+# Initialize a default configuration file
+wikibee config init
+
+# The config file allows you to set default output directories, 
+# TTS server URLs, voices, and more.
+```
+
 ## Common Use Cases
 
 ### For Accessibility
@@ -128,7 +149,8 @@ wikibee "evolution" --tts --output biology/
 - **Smart Search**: Fuzzy matching handles typos and partial queries
 - **Interactive Selection**: Choose from multiple search results with a numbered menu
 - **Clean Output**: Removes Wikipedia markup, leaving clean markdown
-- **TTS Optimization**: Strips formatting markers that confuse text-to-speech engines
+- **Audio Generation**: Generate MP3 or M4B audiobooks with chapter markers
+- **TTS Optimization**: Strips formatting markers and normalizes text for better pronunciation
 - **Flexible Output**: Save to custom directories with custom filenames
 - **Error Handling**: Graceful handling of network issues and missing pages
 - **Cross-Platform**: Works on Windows, macOS, and Linux

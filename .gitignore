@@ -19,6 +19,7 @@ eggs/
 .mypy_cache/
 .coverage
 coverage.xml
+.nox/
 
 # packaging
 pip-wheel-metadata/

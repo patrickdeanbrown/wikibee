@@ -170,6 +170,41 @@ text, title = extract_wikipedia_text("Marie Curie")
 script = create_audio_script(title, text)
 ```
 
+## Audio Generation
+
+You can also generate audio programmatically using the `TTSService`.
+
+### Synthesizing Audio
+
+```python
+from wikibee import extract_wikipedia_text
+from wikibee.services import TTSService, OutputManager
+from wikibee.tts_openai import TTSOpenAIClient
+
+# 1. Extract content
+text, title = extract_wikipedia_text("Albert Einstein")
+markdown = f"# {title}\n\n{text}"
+
+# 2. Setup services
+# Assumes local TTS server at http://localhost:8880/v1
+client = TTSOpenAIClient(base_url="http://localhost:8880/v1")
+output_manager = OutputManager("output", audio_format="mp3")
+service = TTSService(client, output_manager)
+
+# 3. Prepare paths
+paths = output_manager.prepare_paths(title)
+
+# 4. Generate Audio
+audio_path = service.synthesize_audio(
+    markdown=markdown,
+    paths=paths,
+    voice="af_sky",
+    normalize=True
+)
+
+print(f"Audio saved to: {audio_path}")
+```
+
 ### Filename Sanitization
 
 ```python

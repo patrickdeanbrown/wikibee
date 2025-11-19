@@ -45,7 +45,17 @@ This creates two files:
 - `albert_einstein.md` - Clean markdown for reading
 - `albert_einstein.txt` - TTS-optimized text without formatting markers
 
-## Step 4: Organize Your Output
+## Step 4: Generate Audio (Optional)
+
+If you have a local TTS server running (e.g., Kokoro), you can generate audio directly:
+
+```bash
+wikibee "Albert Einstein" --audio --tts-format m4b
+```
+
+This creates an M4B audiobook with chapters corresponding to the article sections.
+
+## Step 5: Organize Your Output
 
 Save files to a specific directory:
 
@@ -55,7 +65,7 @@ wikibee "Marie Curie" --tts --output biographies/
 
 This creates the `biographies/` directory and saves files there.
 
-## Step 5: Try Different Search Methods
+## Step 6: Try Different Search Methods
 
 ### Search by Keywords
 ```bash
