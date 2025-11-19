@@ -13,7 +13,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Contributor guidelines and code of conduct
 - Complete API reference documentation
 
-## [0.1.0] - 2024-12-XX
+## [Unreleased]
+
+## [0.1.2] - 2025-11-19
+
+### Added
+- **Audio Generation**: Support for generating MP3 and M4B audio files directly via CLI and API.
+- **M4B Chapter Support**: Automatically converts Wikipedia section headers into M4B chapters for easy navigation.
+- **Configuration Management**: New `config init` command to generate a default configuration file.
+- **Text Normalization**: New `--tts-normalize` flag for advanced text processing (abbreviation expansion, spacing fixes).
+- **Documentation**: Comprehensive updates to README, Quickstart, and Tutorials covering new audio features.
+
+### Changed
+- Updated `.gitignore` to exclude `.nox/` directory.
+- Improved `README.md` with clearer feature highlights and audio generation examples.
+
+### Fixed
+- Documentation consistency across all guides.
 
 ### Added
 - Complete project rebrand from wiki_extractor to wikibee
