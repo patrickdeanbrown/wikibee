@@ -25,6 +25,8 @@ console = Console()
 sanitize_filename = _formatting.sanitize_filename
 normalize_for_tts = _formatting.normalize_for_tts
 make_tts_friendly = _formatting.make_tts_friendly
+split_wikitext_sections = _formatting.split_wikitext_sections
+convert_wikitext_headers = _formatting.convert_wikitext_headers
 INFLECT_AVAILABLE = _formatting.INFLECT_AVAILABLE
 write_text_file = _formatting.write_text_file
 
@@ -236,16 +238,25 @@ def extract(
         url = url_opt
         logger.info("Extracting article: %s", url)
 
+    # If M4B is requested, we want to preserve headers to create chapters.
+    # We fetch raw text (normalize=False) and then convert WikiText headers to Markdown.
+    should_preserve_headers = args.tts_audio and args.tts_format.lower() == "m4b"
+
     result_text, page_title = extract_wikipedia_text(
         url,
         convert_numbers_for_tts=False,
         timeout=args.timeout,
         lead_only=args.lead_only,
+        normalize=not should_preserve_headers,
     )
 
     if result_text is None:
         logger.error("Failed to extract text from URL")
         raise typer.Exit(code=1)
+
+    if should_preserve_headers:
+        # Convert == Header == to ## Header
+        result_text = convert_wikitext_headers(result_text)
 
     markdown_content = f"# {page_title}\n\n{result_text}\n"
 
@@ -415,7 +426,10 @@ def _parse_title(u: str) -> str:
 
 
 def _process_page(
-    p: PageObject, convert_numbers_for_tts: bool, raise_on_error: bool
+    p: PageObject,
+    convert_numbers_for_tts: bool,
+    raise_on_error: bool,
+    normalize: bool = True,
 ) -> Tuple[Optional[str], Optional[str]]:
     pageprops = p.get("pageprops") or {}
     if "disambiguation" in pageprops:
@@ -433,7 +447,12 @@ def _process_page(
             raise NotFoundError(f"No extract text present for page: {final_title}")
         return None, final_title
 
-    out_text = normalize_for_tts(extract_text, convert_numbers=convert_numbers_for_tts)
+    if normalize:
+        out_text = normalize_for_tts(
+            extract_text, convert_numbers=convert_numbers_for_tts
+        )
+    else:
+        out_text = extract_text
     return out_text, final_title
 
 
@@ -444,6 +463,7 @@ def extract_wikipedia_text(
     lead_only: bool = False,
     session: Optional[requests.Session] = None,
     raise_on_error: bool = False,
+    normalize: bool = True,
 ) -> Tuple[Optional[str], Optional[str]]:
     final_page_title: Optional[str] = None
 
@@ -470,7 +490,9 @@ def extract_wikipedia_text(
         return None, final_page_title
 
     page_obj = next(iter(pages.values()))
-    return _process_page(page_obj, convert_numbers_for_tts, raise_on_error)
+    return _process_page(
+        page_obj, convert_numbers_for_tts, raise_on_error, normalize=normalize
+    )
 
 
 class NetworkError(RuntimeError):

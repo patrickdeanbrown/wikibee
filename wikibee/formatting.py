@@ -101,6 +101,84 @@ def make_tts_friendly(markdown: str, heading_prefix: Optional[str] = None) -> st
     return text
 
 
+def split_markdown_sections(markdown: str) -> list[tuple[str, str]]:
+    """Split markdown into (heading, body) tuples.
+
+    The first section contains any content before the first heading and uses
+    "Introduction" as its title.
+    """
+
+    sections: list[tuple[str, list[str]]] = []
+    current_title: str = "Introduction"
+    current_body: list[str] = []
+
+    heading_re = re.compile(r"^\s*(?P<hashes>#+)\s*(?P<title>.+?)\s*$")
+    for line in markdown.splitlines():
+        match = heading_re.match(line)
+        if match:
+            if current_body:
+                sections.append((current_title, current_body.copy()))
+                current_body.clear()
+            current_title = match.group("title").strip() or current_title
+            continue
+        current_body.append(line)
+
+    sections.append((current_title, current_body.copy()))
+    return [(title, "\n".join(body).strip()) for title, body in sections]
+
+
+def build_tts_sections(markdown: str) -> list[tuple[str, str]]:
+    """Return [(title, markdown_section_with_heading)]."""
+
+    sections = split_markdown_sections(markdown)
+    results: list[tuple[str, str]] = []
+    for title, body in sections:
+        content = f"# {title}\n\n{body}\n" if body else f"# {title}\n"
+        cleaned = content.strip()
+        if cleaned:
+            results.append((title, cleaned))
+    return results
+
+
+def split_wikitext_sections(text: str) -> list[tuple[str, str]]:
+    """Split raw WikiText into (heading, body) tuples.
+
+    Splits by `== Header ==` patterns. The first section is "Introduction".
+    """
+    sections: list[tuple[str, list[str]]] = []
+    current_title: str = "Introduction"
+    current_body: list[str] = []
+
+    # Regex to match == Header == styles
+    heading_re = re.compile(r"^\s*={2,}\s*(?P<title>.+?)\s*={2,}\s*$")
+
+    for line in text.splitlines():
+        match = heading_re.match(line)
+        if match:
+            if current_body:
+                sections.append((current_title, current_body.copy()))
+                current_body.clear()
+            current_title = match.group("title").strip()
+            continue
+        current_body.append(line)
+
+    if current_body or not sections:
+        sections.append((current_title, current_body.copy()))
+
+    return [(title, "\n".join(body).strip()) for title, body in sections]
+
+
+def convert_wikitext_headers(text: str) -> str:
+    """Convert WikiText headers (== Title ==) to Markdown headers (## Title)."""
+
+    def _repl(m: Match[str]) -> str:
+        level = len(m.group(1))
+        title = m.group(2).strip()
+        return f"{'#' * level} {title}"
+
+    return re.sub(r"^(={2,})\s*(.+?)\s*\1\s*$", _repl, text, flags=re.MULTILINE)
+
+
 def write_text_file(path: str, base_dir: str, content: str) -> None:
     """Safely write a text file ensuring it stays within base_dir.
 

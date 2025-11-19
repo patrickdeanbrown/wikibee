@@ -53,6 +53,8 @@ def test_cli_end_to_end_generates_outputs(monkeypatch, tmp_path):
             str(output_dir),
             "--tts",
             "--tts-audio",
+            "--tts-format",
+            "mp3",
             "--heading-prefix",
             "Section:",
         ],
