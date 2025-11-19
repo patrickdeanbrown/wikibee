@@ -180,6 +180,11 @@ def extract(
         "--tts-normalize",
         help="Apply text normalization for better TTS pronunciation",
     ),
+    pick: bool = typer.Option(
+        False,
+        "--pick",
+        help="Interactively select sections to extract",
+    ),
 ) -> None:
     ctx = click.get_current_context()
 
@@ -223,6 +228,12 @@ def extract(
         tts_normalize=runtime.tts_normalize,
     )
 
+    # If picking, we need raw text to split sections.
+    # If M4B is requested, we also need raw text to preserve headers.
+    # So if either is true, we fetch raw and handle normalization later.
+    should_preserve_headers = args.tts_audio and args.tts_format.lower() == "m4b"
+    fetch_raw = pick or should_preserve_headers
+
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
 
@@ -240,19 +251,32 @@ def extract(
 
     # If M4B is requested, we want to preserve headers to create chapters.
     # We fetch raw text (normalize=False) and then convert WikiText headers to Markdown.
-    should_preserve_headers = args.tts_audio and args.tts_format.lower() == "m4b"
+    # If picking, we also fetch raw text, filter it, and then potentially normalize.
 
     result_text, page_title = extract_wikipedia_text(
         url,
         convert_numbers_for_tts=False,
         timeout=args.timeout,
         lead_only=args.lead_only,
-        normalize=not should_preserve_headers,
+        normalize=not fetch_raw,
     )
 
     if result_text is None:
         logger.error("Failed to extract text from URL")
         raise typer.Exit(code=1)
+
+    if pick:
+        result_text = _interactive_pick_sections(result_text)
+        if not result_text:
+            console.print("[yellow]No sections selected. Exiting.[/]")
+            raise typer.Exit(code=0)
+
+    # If we fetched raw but didn't want to preserve headers (and didn't pick),
+    # we should normalize now.
+    # Wait, if pick=True, we fetched raw. Now we have filtered raw text.
+    # If should_preserve_headers=False, we should normalize it now.
+    if fetch_raw and not should_preserve_headers:
+        result_text = normalize_for_tts(result_text, convert_numbers=False)
 
     if should_preserve_headers:
         # Convert == Header == to ## Header
@@ -362,6 +386,78 @@ def _handle_search(search_term: str, args: Args) -> Optional[str]:
         return top_result["url"]
 
     return _show_search_menu(results, search_term)
+
+
+def _interactive_pick_sections(text: str) -> str:
+    """Show interactive menu to pick sections from WikiText."""
+    sections = split_wikitext_sections(text)
+    if not sections:
+        return text
+
+    console.print(f"\n[bold blue]Found {len(sections)} sections:[/]\n")
+    
+    # Print sections with indices
+    for i, (title, _) in enumerate(sections, 1):
+        console.print(f"[bold]{i}.[/] {title}")
+
+    console.print("\n[dim]Enter numbers separated by commas (e.g. 1,3,5) or ranges (e.g. 1-4).[/]")
+    console.print("[dim]Enter 'all' to select all, or 'q' to quit.[/]")
+
+    while True:
+        try:
+            choice = console.input("[yellow]Selection: [/]").strip().lower()
+            
+            if choice == "q":
+                return ""
+            
+            if choice == "all" or choice == "":
+                return text
+
+            selected_indices = set()
+            parts = choice.split(",")
+            
+            for part in parts:
+                part = part.strip()
+                if "-" in part:
+                    start, end = map(int, part.split("-"))
+                    selected_indices.update(range(start, end + 1))
+                else:
+                    selected_indices.add(int(part))
+
+            # Validate indices
+            valid_indices = sorted([i for i in selected_indices if 1 <= i <= len(sections)])
+            
+            if not valid_indices:
+                console.print("[red]No valid sections selected. Try again.[/]")
+                continue
+
+            console.print(f"[green]Selected {len(valid_indices)} sections.[/]")
+            
+            # Reconstruct text
+            # We wrap titles in == == to preserve WikiText structure for subsequent processing
+            picked_content = []
+            for i in valid_indices:
+                title, body = sections[i-1]
+                # If it's the Introduction (usually first), it might not have had a header originally,
+                # but split_wikitext_sections assigns "Introduction".
+                # If we add == Introduction ==, it becomes a header.
+                # Standard Wikipedia doesn't have an "Introduction" header.
+                # But split_wikitext_sections handles the first chunk as "Introduction".
+                # If we reconstruct, we should probably check if it was implicit.
+                # However, for simplicity, let's just append the body for Intro, and headers for others?
+                # split_wikitext_sections returns (heading, body).
+                
+                if i == 1 and title == "Introduction":
+                     picked_content.append(body)
+                else:
+                     picked_content.append(f"== {title} ==\n{body}")
+
+            return "\n\n".join(picked_content)
+
+        except ValueError:
+            console.print("[red]Invalid input. Please use numbers, ranges (1-3), or 'all'.[/]")
+        except KeyboardInterrupt:
+            return ""
 
 
 def _show_search_menu(results: List[SearchResult], search_term: str) -> Optional[str]:
