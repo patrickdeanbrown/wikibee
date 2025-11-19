@@ -199,6 +199,32 @@ wikibee "Mathematics" --tts
 # "1969" becomes "nineteen sixty-nine"
 ```
 
+## Audio Generation
+
+### generating Audio Files
+
+If you have a local TTS server running (like Kokoro), you can generate audio directly from the command line:
+
+```bash
+# Generate MP3 (default)
+wikibee "Ancient Rome" --audio
+
+# Generate M4B audiobook with chapters
+wikibee "History of Rome" --audio --tts-format m4b
+```
+
+### M4B Chapter Support
+
+When using `--tts-format m4b`, wikibee automatically detects Wikipedia section headers and converts them into M4B chapters. This allows you to navigate through the audiobook by section.
+
+### Text Normalization
+
+For better pronunciation, use the `--tts-normalize` flag. This applies advanced text processing to expand abbreviations, fix spacing, and improve readability for the TTS engine.
+
+```bash
+wikibee "Quantum Mechanics" --audio --tts-normalize
+```
+
 ## File Management
 
 ### Understanding Output Files
