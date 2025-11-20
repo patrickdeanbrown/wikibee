@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional, cast
 
+from mutagen.easyid3 import EasyID3
+from mutagen.id3 import ID3NoHeaderError
 from mutagen.mp3 import MP3
 
 from wikibee import formatting
@@ -79,6 +81,7 @@ class TTSService:
         normalize: bool,
         voice: Optional[str],
         file_format: str,
+        metadata: Optional[dict[str, str]] = None,
     ) -> str:
         if file_format.lower() == "m4b":
             return self._synthesize_m4b_with_chapters(
@@ -87,6 +90,7 @@ class TTSService:
                 heading_prefix=heading_prefix,
                 normalize=normalize,
                 voice=voice,
+                metadata=metadata,
             )
 
         text_for_audio = self.build_tts_text(
@@ -95,7 +99,7 @@ class TTSService:
             normalize=normalize,
         )
         relative_audio_path = paths.audio_path.relative_to(self.output_manager.base_dir)
-        return self.client.synthesize_to_file(
+        result_path = self.client.synthesize_to_file(
             text_for_audio,
             dest_path=str(relative_audio_path),
             base_dir=str(self.output_manager.base_dir),
@@ -105,6 +109,15 @@ class TTSService:
             timeout=self.timeout,
         )
 
+        if metadata and file_format.lower() == "mp3":
+            try:
+                self._apply_mp3_metadata(result_path, metadata)
+            except Exception:
+                # Don't fail synthesis if tagging fails
+                pass
+
+        return result_path
+
     def _synthesize_m4b_with_chapters(
         self,
         *,
@@ -113,6 +126,7 @@ class TTSService:
         heading_prefix: Optional[str],
         normalize: bool,
         voice: Optional[str],
+        metadata: Optional[dict[str, str]] = None,
     ) -> str:
         ffmpeg_path = shutil.which("ffmpeg")
         if not ffmpeg_path:
@@ -179,6 +193,19 @@ class TTSService:
             start_ms = 0
             with metadata_file.open("w", encoding="utf-8") as fh:
                 fh.write(";FFMETADATA1\n")
+                if metadata:
+                    for key, value in metadata.items():
+                        # ffmpeg metadata keys are case-insensitive, but convention is often lowercase
+                        # Escape special characters: =, ;, #, \ and newline
+                        safe_val = (
+                            value.replace("\\", "\\\\")
+                            .replace("=", "\\=")
+                            .replace(";", "\\;")
+                            .replace("#", "\\#")
+                            .replace("\n", "\\\n")
+                        )
+                        fh.write(f"{key}={safe_val}\n")
+
                 for section, duration in zip(sections, chapter_lengths):
                     end_ms = start_ms + int(duration * 1000)
                     fh.write("[CHAPTER]\n")
@@ -219,3 +246,21 @@ class TTSService:
             final_dest.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(str(final_tmp), str(final_dest))
             return str(final_dest)
+
+    def _apply_mp3_metadata(self, filepath: str, metadata: dict[str, str]) -> None:
+        try:
+            audio = EasyID3(filepath)
+        except ID3NoHeaderError:
+            audio = EasyID3()
+            audio.filename = filepath
+            audio.save(filepath)
+            audio = EasyID3(filepath)
+
+        # Map metadata keys to EasyID3 keys
+        # Supported: title, artist, album, genre, date, website, copyright, etc.
+        valid_keys = EasyID3.valid_keys.keys()
+        for key, value in metadata.items():
+            if key in valid_keys:
+                audio[key] = value
+
+        audio.save()

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 from typing import Any, Dict, Final, List, Optional, Tuple
 
@@ -294,7 +295,14 @@ def extract(
     logger.info("Saved markdown to %s", paths.markdown_path)
     console.print(f"Output saved to: {paths.markdown_path}")
 
-    _save_outputs(args, output_manager, paths, markdown_content)
+    _save_outputs(
+        args,
+        output_manager,
+        paths,
+        markdown_content,
+        page_title=page_title or args.article,
+        source_url=url,
+    )
 
 
 def _save_outputs(
@@ -302,6 +310,8 @@ def _save_outputs(
     output_manager: OutputManager,
     paths: Any,
     markdown_content: str,
+    page_title: Optional[str],
+    source_url: str,
 ) -> None:
     if args.tts_file:
         output_manager.write_tts_copy(
@@ -320,6 +330,16 @@ def _save_outputs(
             output_manager=output_manager,
             model="kokoro",
         )
+
+        metadata = {
+            "title": page_title or "Unknown Title",
+            "artist": "Wikibee",
+            "album": "Wikibee Articles",
+            "genre": "Speech",
+            "website": source_url,
+            "date": str(date.today().year),
+        }
+
         try:
             saved = tts_service.synthesize_audio(
                 markdown=markdown_content,
@@ -328,6 +348,7 @@ def _save_outputs(
                 normalize=args.tts_normalize,
                 voice=args.tts_voice,
                 file_format=args.tts_format,
+                metadata=metadata,
             )
             logger.info("Saved audio to %s", saved)
             console.print(f"Audio saved to: {saved}")
